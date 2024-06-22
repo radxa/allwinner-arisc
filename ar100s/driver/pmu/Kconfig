@@ -22,6 +22,9 @@ config AXP806_USED
 config AXP858_USED
 	bool "AXP858 used"
 
+config AXP8191_USED
+	bool "AXP8191 used"
+
 config PMU_EXT_USED
 	bool "pmu_ext used"
 

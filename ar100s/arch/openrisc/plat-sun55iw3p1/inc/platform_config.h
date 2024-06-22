@@ -16,6 +16,7 @@
 #define RSB_RTSADDR_AXP2202		(pmu_runtime_addr)
 #define RSB_RTSADDR_AXP2202_B	(0x34)
 #define RSB_RTSADDR_AXP2202_C	(0x35)
+#define RSB_RTSADDR_AXP8191		(pmu_runtime_addr)
 
 #define RSB_RTSADDR_TCS4838		(0x41)
 #define RSB_RTSADDR_SY8827G		(0x60)

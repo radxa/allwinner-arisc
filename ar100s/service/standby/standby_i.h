@@ -62,6 +62,7 @@ typedef struct {
 	uint32_t data;
 	uint32_t drive;
 	uint32_t pull;
+	uint32_t eint;
 } fake_poweroff_pinctrl_t;
 
 extern u32 before_crc;

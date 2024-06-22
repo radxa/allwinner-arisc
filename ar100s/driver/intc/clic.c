@@ -171,7 +171,7 @@ s32 intc_set_mask(u32 intno, u32 mask)
 	/* intno can't beyond then IRQ_SOURCE_MAX */
 	ASSERT(intno < IRQ_SOUCE_MAX);
 
-	writeb((readb(CLIC_INT_IE(intno)) & (~0x1)) | (mask & 0x1), CLIC_INT_IE(intno));
+	writeb((readb(CLIC_INT_IE(intno)) & (~0x1)) | ((~mask) & 0x1), CLIC_INT_IE(intno));
 
 	return OK;
 }

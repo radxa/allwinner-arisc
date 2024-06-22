@@ -164,11 +164,11 @@ static void twic_set_sclk(u32 clk)
 	u32 sclk_real = 0;
 	u32 src_clk = 0;
 	u8 pow_clk_n = 1;
-	u32 divider = 0;
+	//u32 divider = 0;
 
 	src_clk = ccu_get_sclk_freq(CCU_SYS_CLK_APBS2);
 
-	divider = src_clk / clk;
+	//divider = src_clk / clk;
 	clk_m = 0;
 	while (clk_n < 8) {
 		clk_n++;

@@ -44,7 +44,7 @@ static uint32_t standby_vdd_sys;
 static uint32_t standby_vcc_pll;
 static uint32_t standby_vcc_io;
 static uint32_t standby_mcu_en;
-static uint32_t standby_osc24m_on = 1;
+static uint32_t standby_osc24m_on;
 static uint32_t pmu_latency_ms;
 
 /* dram para */
@@ -130,7 +130,7 @@ static void dcxo_disable(void)
 	u32 val;
 
 	val = readl(RTC_XO_CTRL_REG) & (1 << 31);
-	if ((!standby_osc24m_on) || (!!val)) {
+	if ((!standby_osc24m_on) && (!!val)) {
 		ccu_24mhosc_disable();
 	}
 }
@@ -140,7 +140,7 @@ static void dcxo_enable(void)
 	u32 val;
 
 	val = readl(RTC_XO_CTRL_REG) & (1 << 31);
-	if ((!standby_osc24m_on) || (!!val)) {
+	if ((!standby_osc24m_on) && (!!val)) {
 		ccu_24mhosc_enable();
 		time_mdelay(1);
 	}
@@ -240,6 +240,8 @@ static s32 fake_poweroff_pin_dts_parse(void)
 				&fake_poweroff_pin[i].drive);
 		fdt_getprop_u32(fdt, pin_node, "allwinner,pull",
 				&fake_poweroff_pin[i].pull);
+		fdt_getprop_u32(fdt, pin_node, "allwinner,eint",
+				&fake_poweroff_pin[i].eint);
 
 		printk("pin:%s mux:%d data:%d drive:%d pull:%d\n",
 			fake_poweroff_pin[i].name, fake_poweroff_pin[i].mux,
@@ -1170,52 +1172,6 @@ static u32 platform_standby_type(void)
 	return type;
 }
 
-static void rtc_vccio_det_suspend(void)
-{
-	u32 val = 0;
-
-	/* disable vcc-io detect */
-	val = readl(RTC_VDD_OFF_GATING_CTRL);
-	val |= RTC_VCCIO_DETECT_EN;
-	writel(val, RTC_VDD_OFF_GATING_CTRL);
-
-	/* disable vcc-io output */
-	val = readl(RTC_VDD_OFF_GATING_CTRL);
-	val &= ~(RTC_VCCIO_OUTPUT_EN);
-	writel(val, RTC_VDD_OFF_GATING_CTRL);
-
-	/* disable vcc-io debonce */
-	val = readl(RTC_VDD_OFF_GATING_CTRL);
-	val &= ~(RTC_VCCIO_DEBONCE_EN);
-	writel(val, RTC_VDD_OFF_GATING_CTRL);
-}
-
-static void rtc_vccio_det_resume(void)
-{
-	u32 val = 0;
-
-	/* set gear to 2.9v */
-	val = readl(RTC_VDD_OFF_GATING_CTRL);
-	val &= ~(RTC_VCCIO_GEAR_MASK);
-	val |= RTC_VCCIO_GEAR_SEL(4);
-	writel(val, RTC_VDD_OFF_GATING_CTRL);
-
-	/* enable vcc-io debonce */
-	val = readl(RTC_VDD_OFF_GATING_CTRL);
-	val |= RTC_VCCIO_DEBONCE_EN;
-	writel(val, RTC_VDD_OFF_GATING_CTRL);
-
-	/* enable vcc-io output */
-	val = readl(RTC_VDD_OFF_GATING_CTRL);
-	val |= RTC_VCCIO_OUTPUT_EN;
-	writel(val, RTC_VDD_OFF_GATING_CTRL);
-
-	/* enable vcc-io detect */
-	val = readl(RTC_VDD_OFF_GATING_CTRL);
-	val &= ~(RTC_VCCIO_DETECT_EN);
-	writel(val, RTC_VDD_OFF_GATING_CTRL);
-}
-
 static s32 standby_process_init(struct message *pmessage)
 {
 	suspend_lock = 1;
@@ -1236,7 +1192,6 @@ static s32 standby_process_init(struct message *pmessage)
 	dram_suspend();
 	save_state_flag(REC_ESTANDBY | REC_ENTER_INIT | 0x5);
 
-	rtc_vccio_det_suspend();
 	clk_suspend();
 	save_state_flag(REC_ESTANDBY | REC_ENTER_INIT | 0x6);
 
@@ -1269,7 +1224,6 @@ static s32 standby_process_exit(struct message *pmessage)
 	aldo_suspend_resume();
 
 	clk_resume();
-	rtc_vccio_det_resume();
 	save_state_flag(REC_ESTANDBY | REC_ENTER_EXIT | 0x4);
 
 	dram_resume();
@@ -1405,7 +1359,10 @@ static void system_shutdown(void)
 
 static void system_reset(void)
 {
-	pmu_reset();
+	if (read_fake_poweroff_flag() == FAKE_POWEROFF_E)
+		watchdog_reset();
+	else
+		pmu_reset();
 }
 
 int sys_op(struct message *pmessage)
@@ -1467,7 +1424,7 @@ static s32 fake_poweroff_pinx_wakeup_init(fake_poweroff_pinctrl_t *pin)
 
 	/* set negative as external interrupt trigger edge */
 	writel(readl(PIN_REG_INT_CFG(pin_grp, pin_num)) & (~(0xf << PIN_NUM_INT_CFG_OFFSET(pin_num))), PIN_REG_INT_CFG(pin_grp, pin_num));
-	writel(readl(PIN_REG_INT_CFG(pin_grp, pin_num)) | (0x1 << PIN_NUM_INT_CFG_OFFSET(pin_num)), PIN_REG_INT_CFG(pin_grp, pin_num));
+	writel(readl(PIN_REG_INT_CFG(pin_grp, pin_num)) | (pin->eint << PIN_NUM_INT_CFG_OFFSET(pin_num)), PIN_REG_INT_CFG(pin_grp, pin_num));
 
 	/* clean external interrupt pending */
 	writel(readl(PIN_REG_INT_STAT(pin_grp)) & (~(0x1 << pin_num)), PIN_REG_INT_STAT(pin_grp));
@@ -1497,11 +1454,6 @@ static void fake_poweroff_pmu_wakeup_init(void)
 	pmu_clear_pendings();
 }
 
-static void write_start_mode(uint32_t mode)
-{
-	writel(mode, RTC_FAKE_POWEROFF_REG);
-}
-
 s32 fake_poweroff(struct message *pmessage)
 {
 	save_state_flag(REC_FAKEPOWEROFF | REC_ENTER);
@@ -1525,7 +1477,7 @@ s32 fake_poweroff(struct message *pmessage)
 	wait_wakeup();
 
 	save_state_flag(REC_FAKEPOWEROFF | REC_BEFORE_EXIT);
-	write_start_mode(BOOT_NORMAL);
+	save_fake_poweroff_flag(BOOT_NORMAL);
 	save_state_flag(REC_FAKEPOWEROFF | REC_AFTER_EXIT);
 
 	system_reset();

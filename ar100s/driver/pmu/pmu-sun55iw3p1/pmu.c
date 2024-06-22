@@ -31,6 +31,11 @@ extern pmu_ops_t pmu_axp2202_ops;
 static pmu_ops_t *pmu_ops_p = &pmu_axp2202_ops;
 u32 axp_power_max = AXP2202_POWER_MAX;
 u32 pmu_runtime_addr = RSB_RTSADDR_AXP2202_B;
+#elif defined CFG_AXP8191_USED
+extern pmu_ops_t pmu_axp8191_ops;
+static pmu_ops_t *pmu_ops_p = &pmu_axp8191_ops;
+u32 axp_power_max = AXP8191_POWER_MAX;
+u32 pmu_runtime_addr;
 #else
 #error "sun55iw3p1 not support no pmu"
 #endif
@@ -41,8 +46,6 @@ u32 aldo_fix_need = FALSE;
 
 extern struct arisc_para arisc_para;
 extern struct notifier *wakeup_notify;
-
-void watchdog_reset(void);
 
 static u32 pmu_exist = FALSE;
 
@@ -202,15 +205,18 @@ void watchdog_reset(void)
 	/* disable watchdog int */
 	writel(0x0, R_WDOG_REG_BASE + 0x0);
 
-	/* reset whole system */
-	writel((0x1 | (0x1 << 8) | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x14);
+	/* reset whole system and select 32k clock*/
+	writel((0x1 | (0x1 << 8) | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x10);
+
+	/* set output 1ms * 2 / 32, reset soc only */
+	writel((1 | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x18);
 
 	/* set reset after 0.5s */
-	writel(((0 << 4) | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x18);
+	writel(((0 << 4) | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x14);
 	mdelay(1);
 
 	/* enable watchdog */
-	writel((readl(R_WDOG_REG_BASE + 0x18) | 0x1 | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x18);
+	writel((readl(R_WDOG_REG_BASE + 0x14) | 0x1 | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x14);
 	while (1)
 		;
 }

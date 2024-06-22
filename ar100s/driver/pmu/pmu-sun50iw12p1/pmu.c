@@ -29,8 +29,6 @@
 extern struct arisc_para arisc_para;
 extern struct notifier *wakeup_notify;
 
-void watchdog_reset(void);
-
 u32 axp_power_max;
 
 static u32 pmu_exist = FALSE;
@@ -139,10 +137,6 @@ s32 pmu_reg_write_para(pmu_paras_t *para)
 s32 pmu_reg_read_para(pmu_paras_t *para)
 {
 	return pmu_reg_read(para->devaddr, para->regaddr, para->data, para->len);
-}
-
-void watchdog_reset(void)
-{
 }
 
 int nmi_int_handler(void *parg __attribute__ ((__unused__)), u32 intno)

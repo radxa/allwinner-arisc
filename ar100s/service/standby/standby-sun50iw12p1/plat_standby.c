@@ -855,7 +855,7 @@ static void system_shutdown(void)
 	pmu_shutdown();
 }
 
-static void watchdog_reset(void)
+void watchdog_reset(void)
 {
 	LOG("watchdog reset\n");
 

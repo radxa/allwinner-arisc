@@ -135,3 +135,12 @@ u32 read_dtb_base(void)
 	return readl(RTC_DTB_BASE_STORE_REG);
 }
 
+void save_fake_poweroff_flag(u32 value)
+{
+	writel(value, RTC_FAKE_POWEROFF_REG);
+}
+
+u32 read_fake_poweroff_flag(void)
+{
+	return readl(RTC_FAKE_POWEROFF_REG);
+}
