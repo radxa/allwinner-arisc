@@ -82,6 +82,9 @@ typedef struct dram_para {
 	unsigned int        dram_tpr12;
 	unsigned int        dram_tpr13;
 	unsigned int        dram_tpr14;
+#ifdef CFG_DRAM_PARA_V2
+	unsigned int        dram_add[64];
+#endif
 #ifdef CFG_DRAM_PARA_EXTEND_USED
 	unsigned int dram_rdqbit[8];
 	unsigned int dram_wdqbit[8];
@@ -96,6 +99,7 @@ typedef struct dram_para {
 
 #define DELAY_FOR_DRAM
 
+extern uint32_t *dram_dts_parse(void);
 extern unsigned int dram_power_save_process(__dram_para_t *para);
 extern unsigned int dram_power_up_process(__dram_para_t *para);
 #endif /* __DRAM_H__ */

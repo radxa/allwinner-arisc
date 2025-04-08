@@ -16,7 +16,7 @@ extern u32 dtb_base;
 
 #define IS_TX_FIFO_EMPTY  (readl(UART_REG_USR) & (0x1 << 2))
 
-#ifdef CFG_FDT_INIT_ARISC_USED
+#ifdef CFG_FDT_INIT_ARISC_UART_USED
 static s32 uart_init_from_dts(void)
 {
 	void *fdt;
@@ -114,9 +114,11 @@ s32 uart_init(void)
 	u32 apb0_clk;
 
 	uart_rate = UART_BAUDRATE;
-#ifndef CFG_FDT_INIT_ARISC_USED
-	pin_set_multi_sel(PIN_GRP_PL, 2, 2);
-	pin_set_multi_sel(PIN_GRP_PL, 3, 2);
+#ifndef CFG_FDT_INIT_ARISC_UART_USED
+	if (!uart_pin_not_used) {
+		pin_set_multi_sel(PIN_GRP_PL, 2, 2);
+		pin_set_multi_sel(PIN_GRP_PL, 3, 2);
+	}
 #else
 	if (uart_init_from_dts() < 0)
 		uart_pin_not_used = 1;

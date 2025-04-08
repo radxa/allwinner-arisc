@@ -21,7 +21,6 @@
 #include "para.h"
 #include <libfdt.h>
 
-extern u32 dtb_base;
 uint32_t *platform_dram_para;
 
 /* if no define dram init */
@@ -43,7 +42,7 @@ void set_paras(void)
 {
 }
 
-void platform_dts_parse(void)
+void platform_dts_parse_late(void)
 {
 	platform_dram_para = dram_dts_parse();
 }

@@ -10,37 +10,49 @@
 void sunxi_init_archstate(unsigned int cluster, unsigned int cpu, unsigned long arch64)
 {
 	if (arch64) {
-		mmio_setbits_32(SUNXI_INITARCH_REG(cluster, cpu), AARCH64);
+		mmio_setbits_32(SUNXI_INITARCH_REG(cpu), AARCH64);
 	} else {
-		mmio_clrbits_32(SUNXI_INITARCH_REG(cluster, cpu), AARCH64);
+		mmio_clrbits_32(SUNXI_INITARCH_REG(cpu), AARCH64);
 	}
 }
 
 void sunxi_set_bootaddr(unsigned int cluster, unsigned int cpu, uintptr_t entry)
 {
-	mmio_write_32(SUNXI_CPUCFG_RVBAR_LO_REG(cluster, cpu), entry);
-	mmio_write_32(SUNXI_CPUCFG_RVBAR_HI_REG(cluster, cpu), 0);
+	mmio_write_32(SUNXI_CPUCFG_RVBAR_LO_REG(cpu), entry);
+	mmio_write_32(SUNXI_CPUCFG_RVBAR_HI_REG(cpu), 0);
 }
 
-void sunxi_poweron_cpu(unsigned int cluster, unsigned int cpu)
+int sunxi_get_cpu_powerstate(unsigned int cluster, unsigned int core)
 {
-	while ((mmio_read_32(PWRS_STAT_REG(cluster, cpu)) & POWER_MASK) != POWER_OFF)
-		;
+	if ((mmio_read_32(PPU_PWSR(core + 1)) & 0xf) == STATE_ON)
+		return 1;
+	else
+		return 0;
+}
 
-	mmio_setbits_32(HOTPLUG_CONTROL_REG(cluster, cpu), HOTPLUG_REQ);
+int sunxi_get_cluster_powerstate(void)
+{
+	if ((mmio_read_32(PPU_PWSR(0)) & 0xf) == STATE_ON)
+		return 1;
+	else
+		return 0;
+}
 
-	while (mmio_read_32(HOTPLUG_CONTROL_REG(cluster, cpu)) & HOTPLUG_REQ)
-		;
+void sunxi_poweron_cpu(unsigned int cluster, unsigned int core)
+{
+	mmio_setbits_32(HOTPLUG_CONTROL_REG(core), HOTPLUG_EN);
+	mmio_setbits_32(HOTPLUG_POWERMODE_REG(core), POWER_ON);
+
+	while (!sunxi_get_cpu_powerstate(cluster, core)) {
+	}
+
+	mmio_clrbits_32(HOTPLUG_CONTROL_REG(core), HOTPLUG_EN);
 }
 
 void sunxi_poweroff_cpu(unsigned int cluster, unsigned int core)
 {
-	/*no need to poweroff cpu after disable gic wakeup*/
-}
-
-void sunxi_disable_gic_wakeup(unsigned int cluster, unsigned int cpu)
-{
-	mmio_setbits_32(HOTPLUG_CONTROL_REG(cluster, cpu), WAKEUP_MASK);
+	/* Set mp0_spmc_pwr_on_cpuX = 0 */
+	mmio_clrbits_32(HOTPLUG_POWERMODE_REG(core), POWER_ON);
 }
 
 /*standby power off cpu0*/
@@ -48,9 +60,8 @@ void sunxi_disable_gic_wakeup(unsigned int cluster, unsigned int cpu)
 /*wait for cpu power off*/
 void cpucfg_cpu_suspend(void)
 {
-	while ((mmio_read_32(PWRS_STAT_REG(0, 0)) & POWER_MASK) != POWER_OFF)
-		;
-
+	while (sunxi_get_cluster_powerstate()) {
+	}
 	sunxi_poweroff_cpu(0, 0);
 }
 /*power off vdd_cpu*/
@@ -67,9 +78,8 @@ int cpucfg_cpu_resume(unsigned int resume_addr)
 	/*set cpu boot addr*/
 	sunxi_set_bootaddr(0, 0, resume_addr);
 	/*set cpu0 to aarch64*/
-	sunxi_init_archstate(0, 0, AARCH64);
+	sunxi_init_archstate(0, 0, 1);
 	/*power on cpu0*/
-	sunxi_disable_gic_wakeup(0, 0);
 	sunxi_poweron_cpu(0, 0);
 
 	return 0;

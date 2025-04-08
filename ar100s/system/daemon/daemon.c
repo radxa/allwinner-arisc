@@ -155,9 +155,6 @@ void startup_entry(void)
 	save_state_flag(REC_HOTPULG | 0x6);
 	LOG("debugger system ok\n");
 
-	platform_dts_parse();
-	LOG("platform dts get ok\n");
-
 	twi_init();
 	LOG("twi driver ok\n");
 	save_state_flag(REC_HOTPULG | 0x7);
@@ -194,6 +191,9 @@ void startup_entry(void)
 
 	/* feedback the startup state to ac327 */
 	startup_state_notify(OK);
+
+	platform_dts_parse_late();
+
 	set_paras();
 	save_state_flag(REC_HOTPULG | 0xf);
 	LOG("startup feedback ok\n");

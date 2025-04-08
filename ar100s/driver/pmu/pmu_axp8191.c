@@ -19,6 +19,9 @@
 
 #include "pmu_i.h"
 
+#define SUNXI_CHARGING_FLAG_AXP8191 (0x08)
+#define SUNXI_REBOOT_FLAG_AXP8191   (0x01)
+
 /**
  * axp8191 voltages info table,
  * the index of table is voltage type.
@@ -72,45 +75,81 @@ pmu_onoff_reg_bitmap_t axp8191_onoff_reg_bitmap[] = {
  * axp8191 specific function,
  * only called by pmu common function.
  */
-static void axp8191_pmu_shutdown(void)
+ static u8 _axp8191_vbus_check(void)
+{
+	/* battery & vbus presence */
+	if (is_bmu_exist() == TRUE) {
+		if (bmu_charging_vbus_det() == OK) {
+			LOG("%s:%d bmu_charging_vbus_det\n", __func__, __LINE__);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static void _axp8191_pmu_softset(u8 val)
 {
 	u8 devaddr = RSB_RTSADDR_AXP8191;
 	u8 regaddr = AXP8191_POWER_DISABLE_POWER_DOWN_SEQUENCE;
 	u8 data;
 
-	save_state_flag(REC_SHUTDOWN | 0x201);
+	save_state_flag(REC_SHUTDOWN | 0x300 | val);
 
 	pmu_reg_read(&devaddr, &regaddr, &data, 1);
-	data |= 0x80;
+	data |= 1 << (7 - val);
 	pmu_reg_write(&devaddr, &regaddr, &data, 1);
 
-	LOG("poweroff system\n");
+	if (val)
+		LOG("reset system\n");
+	else
+		LOG("poweroff system\n");
 
 	while (1)
 		;
+}
+
+
+static void axp8191_pmu_shutdown(void)
+{
+	save_state_flag(REC_SHUTDOWN | 0x201);
+
+	bmu_shutdown();
+	_axp8191_pmu_softset(0);
 }
 
 static void axp8191_pmu_reset(void)
 {
 	u8 devaddr = RSB_RTSADDR_AXP8191;
-	u8 regaddr = AXP8191_POWER_DISABLE_POWER_DOWN_SEQUENCE;
-	u8 data;
+	u8 regaddr = AXP8191_BUFFER0;
+	u8 data = SUNXI_REBOOT_FLAG_AXP8191;
 
 	save_state_flag(REC_SHUTDOWN | 0x202);
 
-	pmu_reg_read(&devaddr, &regaddr, &data, 1);
-	data |= 0x40;
+	bmu_reset();
 	pmu_reg_write(&devaddr, &regaddr, &data, 1);
 
-	LOG("reset system\n");
+	_axp8191_pmu_softset(1);
+}
 
-	while (1)
-		;
+static void axp8191_pmu_charging_reset(void)
+{
+	u8 devaddr = RSB_RTSADDR_AXP8191;
+	u8 regaddr = AXP8191_BUFFER0;
+	u8 val;
+
+	save_state_flag(REC_SHUTDOWN | 0x203);
+	val = _axp8191_vbus_check();
+	if (val) {
+		val = SUNXI_CHARGING_FLAG_AXP8191;
+		pmu_reg_write(&devaddr, &regaddr, &val, 1);
+		bmu_reset();
+		_axp8191_pmu_softset(1);
+	}
 }
 
 static s32 axp8191_pmu_set_voltage_state(u32 type, u32 state)
 {
-	u8 devaddr = RSB_RTSADDR_AXP2202;
+	u8 devaddr = RSB_RTSADDR_AXP8191;
 	u8 regaddr;
 	u8 data;
 	u32 offset;
@@ -135,6 +174,7 @@ static s32 axp8191_pmu_set_voltage_state(u32 type, u32 state)
 pmu_ops_t pmu_axp8191_ops = {
 	.pmu_shutdown = axp8191_pmu_shutdown,
 	.pmu_reset = axp8191_pmu_reset,
+	.pmu_charging_reset = axp8191_pmu_charging_reset,
 	.pmu_set_voltage_state = axp8191_pmu_set_voltage_state,
 };
 

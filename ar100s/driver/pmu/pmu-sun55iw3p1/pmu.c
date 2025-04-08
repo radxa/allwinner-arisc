@@ -226,7 +226,7 @@ int nmi_int_handler(void *parg __attribute__ ((__unused__)), u32 intno)
 	return TRUE;
 }
 
-#ifdef CFG_FDT_INIT_ARISC_USED
+#ifdef CFG_FDT_INIT_ARISC_PMU_USED
 static void pmu_init_from_dts(void)
 {
 	void *fdt;
@@ -269,7 +269,7 @@ s32 pmu_init(void)
 		return OK;
 	}
 
-#ifdef CFG_FDT_INIT_ARISC_USED
+#ifdef CFG_FDT_INIT_ARISC_PMU_USED
 	pmu_init_from_dts();
 #endif
 	interrupt_clear_pending(INTC_R_NMI_IRQ);

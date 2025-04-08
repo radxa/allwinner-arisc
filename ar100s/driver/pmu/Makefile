@@ -6,6 +6,7 @@ obj-$(CFG_AXP8191_USED) += pmu_axp8191.o
 obj-$(CFG_PMU_EXT_USED) += pmu_ext.o
 obj-$(CFG_ETA6973_USED) += bmu_eta6973.o
 obj-$(CFG_AXP519_USED) += bmu_axp519.o
+obj-$(CFG_AXP515_USED) += bmu_axp515.o
 
 obj-y += pmu-$(CFG_CHIP_PLATFORM)/
 

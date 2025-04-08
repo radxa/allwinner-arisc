@@ -53,6 +53,14 @@ config SUN60IW1P1
 	select AR100S_OS
 	prompt "AW1885 sun60iw1p1 T736 platform"
 
+config SUN60IW2P1
+	bool
+	imply CPUX_ARM64
+	select RISCV
+	select AR100S_OS
+	prompt "AW1903 sun60iw2p1 A733 platform"
+
+
 config SUN65IW1P1
 	bool
 	imply CPUX_ARM64
@@ -99,6 +107,7 @@ config CHIP_PLATFORM
 	default "sun55iw3p1" if SUN55IW3P1
 	default "sun60iw1p1" if SUN60IW1P1
 	default "sun65iw1p1" if SUN65IW1P1
+	default "sun60iw2p1" if SUN60IW2P1
 	default "sun8iw12p1" if SUN8IW12P1
 	default "sun8iw15p1" if SUN8IW15P1
 	default "sun8iw16p1" if SUN8IW16P1

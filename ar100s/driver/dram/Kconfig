@@ -10,6 +10,10 @@ menuconfig DRAM_PARA_EXTEND_USED
 	prompt "DRAM para extend used"
 	default n
 
+config DRAM_DTS_PARA_V2
+	bool
+	prompt "DRAM dts para V2 used"
+
 config HAVE_DDR_SEL_SUPPORT
 	bool
 
@@ -24,6 +28,11 @@ config HAVE_LRDDR3_SUPPORT
 
 config HAVE_LRDDR4_SUPPORT
 	bool
+
+config DRAM_PARA_V2
+	bool
+	prompt "DRAM para v2 used"
+	default n
 
 choice DDR_TYPE
 	prompt  "DDR type used"

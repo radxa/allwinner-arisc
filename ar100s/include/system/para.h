@@ -22,4 +22,5 @@ extern void arisc_para_init(void);
 extern void set_paras(void);
 extern void platform_dts_parse(void);
 
+extern void platform_dts_parse_late(void);
 #endif /* __ARISC_PARA_H__ */

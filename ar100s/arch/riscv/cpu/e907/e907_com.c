@@ -3628,6 +3628,22 @@ void init_clic_handle(void)
 		vectors[i] = null_clic_hdle;
 }
 
+extern s32 platform_nmi_handler(void *parg);
+s32 __attribute__((weak)) platform_nmi_handler(void *parg)
+{
+	return OK;
+}
+
+#define INTC_R_NMI_EXCEPTION    (24)
+static s32 exception_entry(void)
+{
+	if ((__get_MCAUSE() & 0xff) == INTC_R_NMI_EXCEPTION) {
+		platform_nmi_handler(NULL);
+	}
+
+	return OK;
+}
+
 u32 hadle_trap(u32 mcause, u32 epc)
 {
 //	u32 intnum;
@@ -3640,7 +3656,27 @@ u32 hadle_trap(u32 mcause, u32 epc)
 //		msg("hadle_trap: int%d coming!\n",intnum);
 //		vectors[intnum]();
 		interrupt_entry();
+	} else {
+		exception_entry();
 	}
+
 	return epc;
 }
 
+/* e902 wakeup source configuration */
+void  interrput_arch_set_mask(s32 intno, bool state)
+{
+	if (state) {
+
+		if (intno / (MASK1_START_INTERRUPT -1))
+			writel(readl(E902_WAKEUP_MASK1_REG) | (0x01 << (intno - MASK1_START_INTERRUPT)), E902_WAKEUP_MASK1_REG);
+		else
+			writel(readl(E902_WAKEUP_MASK0_REG) | (0x01 << (intno - MASK0_START_INTERRUPT)), E902_WAKEUP_MASK0_REG);
+	} else {
+
+		if (intno / (MASK1_START_INTERRUPT -1))
+			writel(readl(E902_WAKEUP_MASK1_REG) & ~(0x01 << (intno - MASK1_START_INTERRUPT)), E902_WAKEUP_MASK1_REG);
+		else
+			writel(readl(E902_WAKEUP_MASK0_REG) & ~(0x01 << (intno - MASK0_START_INTERRUPT)), E902_WAKEUP_MASK0_REG);
+	}
+};

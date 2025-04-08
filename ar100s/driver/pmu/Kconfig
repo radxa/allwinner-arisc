@@ -38,4 +38,7 @@ config ETA6973_USED
 config AXP519_USED
 	bool "bmu axp519 used"
 
+config AXP515_USED
+	bool "bmu axp515 used"
+
 endif # BMU_USED

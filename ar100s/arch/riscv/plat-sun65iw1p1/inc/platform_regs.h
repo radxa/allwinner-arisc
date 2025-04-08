@@ -28,6 +28,7 @@
 #define R_PRCM_REG_BASE         (0x07030000)
 #define R_TMR01_REG_BASE        (0x07208000)
 #define R_WDOG_REG_BASE         (0x07040000)
+#define E902_CFG_BASE           (0x07032000)
 #define R_INTC_REG_BASE         (0x03018000)//
 #define R_PIO_REG_BASE          (0x07058000)
 #define R_CIR_REG_BASE          (0x070A8000)
@@ -139,5 +140,11 @@
 #define CCU_IOSC_FREQ               (16000000)	//16M
 #define CCU_CPUS_POST_DIV           (100000000)	//cpus post div source clock freq
 #define CCU_PERIPH0_FREQ            (600000000)	//600M
+
+#define E902_WAKEUP_MASK0_REG (E902_CFG_BASE + 0x64)
+#define E902_WAKEUP_MASK1_REG (E902_CFG_BASE + 0x68)
+
+#define MASK0_START_INTERRUPT 16
+#define MASK1_START_INTERRUPT 48
 
 #endif

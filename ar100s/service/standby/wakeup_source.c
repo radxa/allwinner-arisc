@@ -6,6 +6,12 @@ u32 volatile wakeup_source;
 
 static struct softtimer wakeup_timer;
 
+void  __attribute__((weak)) interrput_arch_set_mask(s32 intno, bool state)
+{
+	return;
+};
+
+
 static s32 wakeup_timer_handler(void *parg)
 {
 	wakeup_source = WAKESOURE_TIMER;
@@ -89,6 +95,7 @@ static int irq_wakesource_init(s32 irq_num, __pCBK_t init, void *init_parg, __pI
 
 	interrupt_enable(irq_num);
 	interrupt_set_mask(irq_num, FALSE);
+	interrput_arch_set_mask(irq_num, TRUE);
 
 	return OK;
 }
@@ -101,6 +108,7 @@ static int irq_wakesource_exit(s32 irq_num, __pCBK_t exit, void *exit_parg, __pI
 	if (handler != NULL)
 		install_isr(irq_num, handler, parg);
 	interrupt_set_mask(irq_num, TRUE);
+	interrput_arch_set_mask(irq_num, FALSE);
 
 	return OK;
 }
