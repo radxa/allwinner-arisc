@@ -998,13 +998,46 @@ static void cpu_pll_off(void)
 	}
 }
 
+enum sunxi_soc_ver {
+	SUNXI_SOC_VER_INVALID = -1,
+	SUNXI_SOC_VER_A = 0,
+	SUNXI_SOC_VER_B = 1,
+	SUNXI_SOC_VER_C = 2,
+};
+
+#define SUNXI_SOC_VER_REG	(SYS_CFG_REG_BASE + 0x24)
+#define SUNXI_SOC_VER_MASK	(0x7)
+static int sunxi_get_soc_ver(void)
+{
+	uint32_t value;
+
+	value = readl(SUNXI_SOC_VER_REG);
+	value &= SUNXI_SOC_VER_MASK;
+
+	return SUNXI_SOC_VER_A + value;
+}
+
+#define PLL_CTRL1_REG_OFFSET	(0x144)
 /*standby power on cpu*/
 static void cpu_pll_on(void)
 {
 	int i;
 
 	LOG("cpu on \n");
-	/* set cpu pll */
+
+	/* step0: set pll-ldo */
+	if (sunxi_get_soc_ver() == SUNXI_SOC_VER_A) {
+		// VERA set pll-ldo 1.02V
+		writel(0xA7070025, CPUSUBSYS_REG_BASE + PLL_CTRL1_REG_OFFSET);
+		writel(0xA7070025, CPUSUBSYS_REG_BASE + PLL_CTRL1_REG_OFFSET);
+	} else if (sunxi_get_soc_ver() == SUNXI_SOC_VER_B) {
+		// VERB set pll-ldo 1.02V
+		writel(0xA7060025, CPUSUBSYS_REG_BASE + PLL_CTRL1_REG_OFFSET);
+		writel(0xA7060025, CPUSUBSYS_REG_BASE + PLL_CTRL1_REG_OFFSET);
+	}
+
+	/* start Linear Frequency Modulation LFM pll setting */
+	/* step1: set cpu pll on */
 	for (i = 0; i < 4; i++) {
 		/* set pll on */
 		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_LDO_EN), CPU_PLL_REG(i));
