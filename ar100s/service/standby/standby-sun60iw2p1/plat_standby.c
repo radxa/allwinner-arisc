@@ -34,13 +34,45 @@ static u32 standby_type;
 static u32 usb_standby_port;
 
 /* standby paras */
-static uint32_t standby_vdd_cpu;
-static uint32_t standby_vdd_cpub;
-static uint32_t standby_vdd_sys;
+#define STANDBY_POWER_SIZE (32)
+#define STANDBY_POWER_NUM (2)
+struct standby_power_bitmap {
+	const char name[16];
+	uint32_t power[STANDBY_POWER_NUM];
+};
+
+enum {
+	STANDBY_VDD_CPUB = 0,
+	STANDBY_VDD_CPU,
+	STANDBY_VDD_SYS,
+	STANDBY_VDD_GPU,
+	STANDBY_VDD_NPU,
+	STANDBY_VCC_PLL,
+	STANDBY_VCC18_HDMI,
+	STANDBY_AVDD_H_COMBO,
+	STANDBY_VCC_IO,
+	STANDBY_VCC25_UFS,
+	STANDBY_VCC18_12_UFS,
+	STANDBY_VCC_EFUSE,
+	STANDBY_POWER_MAX,
+};
+
+static struct standby_power_bitmap power_bitmap_array[] = {
+	[STANDBY_VDD_CPUB] = {"vdd-cpub"},
+	[STANDBY_VDD_CPU] = {"vdd-cpu"},
+	[STANDBY_VDD_SYS] = {"vdd-sys"},
+	[STANDBY_VDD_GPU] = {"vdd-gpu"},
+	[STANDBY_VDD_NPU] = {"vdd-npu"},
+	[STANDBY_VCC_PLL] = {"vcc-pll"},
+	[STANDBY_VCC18_HDMI] = {"vcc18-hdmi"},
+	[STANDBY_AVDD_H_COMBO] = {"avdd-h-combo"},
+	[STANDBY_VCC_IO] = {"vcc-io"},
+	[STANDBY_VCC25_UFS] = {"vcc25-ufs"},
+	[STANDBY_VCC18_12_UFS] = {"vcc18-12-ufs"},
+	[STANDBY_VCC_EFUSE] = {"vcc-efuse"},
+};
+
 static uint32_t standby_vdd_usb;
-static uint32_t standby_vcc_pll;
-static uint32_t standby_vcc_io;
-static uint32_t standby_vcc_efuse;
 static uint32_t standby_osc24m_on = 1;
 
 /* dram para */
@@ -240,6 +272,7 @@ static void dcxo_enable(void)
 static s32 standby_dts_parse(void)
 {
 	static u32 dts_has_parsed;
+	u32 i, j;
 	void *fdt;
 	int32_t param_node;
 
@@ -248,23 +281,27 @@ static s32 standby_dts_parse(void)
 
 	fdt = (void *)(dtb_base);
 
-    /* parse power tree */
-    param_node = fdt_path_offset(fdt, "standby_param");
-    if (param_node < 0) {
+	/* parse power tree */
+	param_node = fdt_path_offset(fdt, "standby_param");
+	if (param_node < 0) {
 		WRN("no standby_param: %x fdt:%x\n", param_node, fdt);
 		return -1;
-    }
+	}
 
-	fdt_getprop_u32(fdt, param_node, "vdd-cpu", &standby_vdd_cpu);
-	fdt_getprop_u32(fdt, param_node, "vdd-cpub", &standby_vdd_cpub);
-	fdt_getprop_u32(fdt, param_node, "vdd-sys", &standby_vdd_sys);
+	for (i = 0; i < STANDBY_POWER_MAX; i++) {
+		fdt_getprop_u32(fdt, param_node, power_bitmap_array[i].name, power_bitmap_array[i].power);
+		LOG("%s < ", power_bitmap_array[i].name);
+		for (j = 0; j < STANDBY_POWER_NUM; j++) {
+			LOG("0x%x ", power_bitmap_array[i].power[j]);
+		}
+		LOG(">\n");
+	}
+
 	fdt_getprop_u32(fdt, param_node, "vdd-usb", &standby_vdd_usb);
-	fdt_getprop_u32(fdt, param_node, "vcc-pll", &standby_vcc_pll);
-	fdt_getprop_u32(fdt, param_node, "vcc-io", &standby_vcc_io);
-	fdt_getprop_u32(fdt, param_node, "vcc-efuse", &standby_vcc_efuse);
+	LOG("standby_vdd_usb 0x%x\n", standby_vdd_usb);
+
 	fdt_getprop_u32(fdt, param_node, "osc24m-on", &standby_osc24m_on);
-	LOG("standby power %x, %x, %x, %x, %x\n",
-			standby_vdd_cpu, standby_vdd_sys, standby_vcc_pll, standby_vcc_io, standby_osc24m_on);
+	LOG("standby_osc24m_on 0x%x\n", standby_osc24m_on);
 
 	dts_has_parsed = 1;
 
@@ -329,86 +366,47 @@ static void wait_cpu0_resume(void)
 }
 
 
-#define AXP_POWER_MAX 32
-static void dm_suspend(void)
+static void pmu_standby_power_onoff(uint32_t *standby_power, u32 state)
 {
 	u32 type;
 
-	/* vcc-io powerdown */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vcc_io >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_OFF);
+	if (axp_power_max > STANDBY_POWER_SIZE * STANDBY_POWER_NUM) {
+		ERR("axp_power_max: %d overflow\n", axp_power_max);
+		return;
 	}
 
-	/* vcc-efuse powerdown */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vcc_efuse >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_OFF);
+	for (type = 0; type < axp_power_max; type++) {
+		if ((standby_power[type / STANDBY_POWER_SIZE] >> (type % STANDBY_POWER_SIZE)) & 0x1)
+			pmu_set_voltage_state(type, state);
+	}
+}
+
+static void dm_suspend(void)
+{
+	u32 i;
+
+	for (i = 0; i < STANDBY_POWER_MAX; i++) {
+
+		/* keep vcc-pll on if dcxo on */
+		if ((STANDBY_POWER_MAX -1 -i) == STANDBY_VCC_PLL && !is_hosc_lock())
+			continue;
+
+		pmu_standby_power_onoff(power_bitmap_array[STANDBY_POWER_MAX -1 -i].power, POWER_VOL_OFF);
 	}
 
-	/* vdd-cpub powerdown */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vdd_cpub >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_OFF);
-	}
-
-	/* vdd-cpul powerdown */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vdd_cpu >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_OFF);
-	}
-
-	/* vdd-sys powerdown */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vdd_sys >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_OFF);
-	}
-
-	/* vcc-pll powerdown */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vcc_pll >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_OFF);
-	}
 }
 
 static void dm_resume(void)
 {
-	u32 type;
+	u32 i;
 
-	/* vcc-pll powerup */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vcc_pll >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_ON);
-	}
+	for (i = 0; i < STANDBY_POWER_MAX; i++) {
 
-	/* vdd-sys powerup */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vdd_sys >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_ON);
-	}
+		/* keep vcc-pll on if dcxo on */
+		if (i == STANDBY_VCC_PLL && !is_hosc_lock())
+			continue;
 
-	/* vdd-cpul powerup */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vdd_cpu >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_ON);
-	}
-
-	/* vdd-cpub powerup */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vdd_cpub >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_ON);
-	}
-
-	/* vcc-efuse powerup */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vcc_efuse >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_ON);
-	}
-
-	/* vdd-io powerup */
-	for (type = 0; type < AXP_POWER_MAX; type++) {
-		if ((standby_vcc_io >> type) & 0x1)
-			pmu_set_voltage_state(type, POWER_VOL_ON);
+		pmu_standby_power_onoff(power_bitmap_array[i].power, POWER_VOL_ON);
 	}
 }
 
