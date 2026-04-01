@@ -11,6 +11,7 @@
 #define BIT(n)							(0x1 << (n))
 
 #define SUNXI_CPU_OPS_BASE				0x07050000
+#define SUNXI_DSU_REG					0x08868000
 #define CPUS_RST_CTRL_REG				SUNXI_CPU_OPS_BASE
 #define HOTPLUG_CONTROL_REG(n)			(SUNXI_CPU_OPS_BASE + 0x200 + (n) * 4)
 #define WAKEUP_MASK						BIT(1)

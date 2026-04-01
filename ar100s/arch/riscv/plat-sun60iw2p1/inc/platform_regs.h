@@ -202,6 +202,11 @@
 #define RTC_HMS_S_SHIFT		(0)
 #define RTC_HMS_S_MASK		(0x3F << RTC_HMS_S_SHIFT)
 
+/* RESCAL_CTRL */
+#define RESCAL_CTRL_REG		(SYS_CFG_REG_BASE + 0x0160)
+#define RES0_CTRL_REG		(SYS_CFG_REG_BASE + 0x0164)
+#define RES1_CTRL_REG		(SYS_CFG_REG_BASE + 0x0168)
+
 /* USB */
 #define USB0_USB_CTRL_REG           (USB0_REG_BASE + 0x800)
 #define USB1_USB_CTRL_REG           (USB1_REG_BASE + 0x800)

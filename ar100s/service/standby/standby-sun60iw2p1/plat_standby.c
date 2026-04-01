@@ -33,6 +33,10 @@ static u32 suspend_lock;
 static u32 standby_type;
 static u32 usb_standby_port;
 
+static u32 rescal_ctrl;
+static u32 res0_ctrl;
+static u32 res1_ctrl;
+
 /* standby paras */
 #define STANDBY_POWER_SIZE (32)
 #define STANDBY_POWER_NUM (2)
@@ -766,6 +770,20 @@ static void usb_iso_resume(void)
 	}
 }
 
+static void res_ctrl_save(void)
+{
+	rescal_ctrl = readl(RESCAL_CTRL_REG);
+	res0_ctrl = readl(RES0_CTRL_REG);
+	res1_ctrl = readl(RES1_CTRL_REG);
+}
+
+static void res_ctrl_restore(void)
+{
+	writel(rescal_ctrl, RESCAL_CTRL_REG);
+	writel(res0_ctrl, RES0_CTRL_REG);
+	writel(res1_ctrl, RES1_CTRL_REG);
+}
+
 static void device_suspend(void)
 {
 	usb_standby_init();
@@ -774,10 +792,12 @@ static void device_suspend(void)
 	pmu_standby_init();
 	twi_standby_init();
 	hwmsgbox_super_standby_init();
+	res_ctrl_save();
 }
 
 static void device_resume(void)
 {
+	res_ctrl_restore();
 	hwmsgbox_super_standby_exit();
 	twi_standby_exit();
 	pmu_standby_exit();
@@ -1078,15 +1098,23 @@ static void cpu_pll_on(void)
 }
 
 #define CPU_DIRECT_ACCESS_DDR 0x8000200
+#define CPU_OT0 0xa030014
+#define CPU_OT1 0xa040014
 unsigned int cpu_direct_access;
+unsigned int cpu_ot0, cpu_ot1;
 static void cpu_direct_access_suspend(void)
 {
 	cpu_direct_access = readl(CPU_DIRECT_ACCESS_DDR);
+	cpu_ot0 = readl(CPU_OT0);
+	cpu_ot1 = readl(CPU_OT1);
 }
 
 static void cpu_direct_access_resume(void)
 {
 	writel(cpu_direct_access, CPU_DIRECT_ACCESS_DDR);
+	//ot
+	writel(cpu_ot0, CPU_OT0);
+	writel(cpu_ot1, CPU_OT1);
 }
 
 static void nsi_resume(void)

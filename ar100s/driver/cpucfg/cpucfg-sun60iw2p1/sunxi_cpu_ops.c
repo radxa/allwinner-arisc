@@ -58,10 +58,19 @@ void sunxi_poweroff_cpu(unsigned int cluster, unsigned int core)
 /*standby power off cpu0*/
 
 /*wait for cpu power off*/
+#define MAX_TIMEOUT	(10000)
 void cpucfg_cpu_suspend(void)
 {
+	unsigned int timeout = 0;
+
 	sunxi_poweroff_cpu(0, 0);
 	while (sunxi_get_cluster_powerstate()) {
+		timeout++;
+		if (timeout >= MAX_TIMEOUT) {
+			mmio_clrbits_32(SUNXI_DSU_REG, BIT(0));
+			mmio_setbits_32(SUNXI_DSU_REG, BIT(0));
+			break;
+		}
 	}
 }
 /*power off vdd_cpu*/
