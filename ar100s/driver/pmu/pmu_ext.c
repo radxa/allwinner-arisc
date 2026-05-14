@@ -48,6 +48,15 @@ enum {
 	AXP1530_ID,
 };
 
+enum axp1530_power_status {
+	AXP1530_DCDC1_EN_CFG = 0,
+	AXP1530_DCDC2_EN_CFG,
+	AXP1530_DCDC3_EN_CFG,
+	AXP1530_ALDO_EN_CFG,
+	AXP1530_DLDO_EN_CFG,
+	AXP1530_POWER_MAX_CFG
+};
+
 static int pmu_chip_id;
 /**
  * pmu_ext check,
@@ -113,7 +122,7 @@ s32 axp1530_backup(u32 type, u32 state)
 			regaddr = AXP1530_DC2OUT_VOL;
 			pmu_reg_read(&devaddr, &regaddr, &reg_bak[1], 1);
 			offset_mask = 0x03;
-		} else {
+		} else if (type == AXP1530_POWER_DCDC3) {
 			regaddr = AXP1530_DC3OUT_VOL;
 			pmu_reg_read(&devaddr, &regaddr, &reg_bak[2], 1);
 			offset_mask = 0x04;
@@ -133,13 +142,35 @@ s32 axp1530_backup(u32 type, u32 state)
 			regaddr = AXP1530_DC2OUT_VOL;
 			pmu_reg_write(&devaddr, &regaddr, &reg_bak[1], 1);
 			offset_mask = 0x03;
-		} else {
+		} else if (type == AXP1530_POWER_DCDC3) {
 			regaddr = AXP1530_DC3OUT_VOL;
 			pmu_reg_write(&devaddr, &regaddr, &reg_bak[2], 1);
 			offset_mask = 0x04;
 		}
 	}
 	return offset_mask;
+}
+
+static void axp1530_shutdown(void)
+{
+	u8 devaddr = RSB_RTSADDR_AXP1530;
+	u8 regaddr;
+	u8 data;
+	bool onoff = 0;
+
+	regaddr = AXP1530_WRITE_LOCK;
+	data = 0x05;
+	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+
+	regaddr = AXP1530_ERROR_MANAGEMENT;
+	data = 0x04;
+	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+
+	regaddr = AXP1530_STARTUP_SEQ_SET;
+	pmu_reg_read(&devaddr, &regaddr, &data, 1);
+	data &= ~(1 << 2);
+	data |= (onoff << 2);
+	pmu_reg_write(&devaddr, &regaddr, &data, 1);
 }
 
 /**
@@ -215,3 +246,63 @@ s32 pmu_ext_set_voltage_state(u32 type, u32 state)
 
 	return OK;
 }
+
+#ifdef CFG_PMU_POWER_CHECK
+void pmu_ext_power_check(void)
+{
+	u32 type, status;
+	u8 data;
+	u8 axp1530_devaddr = RSB_RTSADDR_AXP1530;
+	u8 axp1530_regaddr = AXP1530_OUTPUT_POWER_ON_OFF_CTL;
+
+	/*  if exist axp1530 pmu, excute the following code*/
+
+	for (type = AXP1530_DCDC1_EN_CFG, status = 1; type < AXP1530_POWER_MAX_CFG; type++, status++) {
+		pmu_reg_read(&axp1530_devaddr, &axp1530_regaddr, &data, 1);
+		data = ((data >> type) & 0x01);
+
+		switch (type) {
+		case AXP1530_DCDC1_EN_CFG:
+		case AXP1530_DCDC2_EN_CFG:
+		case AXP1530_DCDC3_EN_CFG:
+			if (data)
+				LOG("\033[;31mAXP1530_DCDC[%d] open \033[0m\n", status);
+			else
+				LOG("\033[;31mAXP1530_DCDC[%d] close \033[0m\n", status);
+			break;
+		case AXP1530_ALDO_EN_CFG:
+			if (data)
+				LOG("\033[;31mAXP1530_ALDO1 open \033[0m\n", status);
+			else
+				LOG("\033[;31mAXP1530_ALDO1 close \033[0m\n", status);
+			break;
+		case AXP1530_DLDO_EN_CFG:
+			if (data)
+				LOG("\033[;31mAXP1530_DLDO1 open \033[0m\n", status);
+			else
+				LOG("\033[;31mAXP1530_DLDO1 close \033[0m\n", status);
+			break;
+		default:
+			break;
+		}
+	}
+}
+#else
+void pmu_ext_power_check(void)
+{
+	return;
+}
+#endif
+
+void pmu_ext_shutdown(void)
+{
+	switch (pmu_chip_id) {
+	case AXP1530_ID:
+		axp1530_shutdown();
+		break;
+	default:
+		WRN("invaid pmu_ext type (%d)\n", pmu_chip_id);
+		break;
+	}
+}
+

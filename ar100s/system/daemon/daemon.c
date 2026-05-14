@@ -83,6 +83,13 @@ static void message_process_loop(void)
 	amp_msgbox_query_message();
 }
 
+extern void plat_process_loop(void);
+void __attribute__((weak)) plat_process_loop(void)
+{
+	hdmi_main_loop();
+	return;
+};
+
 static void daemon_main(void)
 {
 	/* initialize cpu */
@@ -108,6 +115,7 @@ static void daemon_main(void)
 		 * maybe add user defined task process here
 		 * refer to daemon list process
 		 */
+		plat_process_loop();
 	}
 }
 
@@ -116,6 +124,12 @@ static void dtb_base_init(void)
 	dtb_base = read_dtb_base();
 	cpucfg_set_little_endian_address((void *)(dtb_base), (void *)(dtb_base + ARISC_DTS_SIZE));
 }
+
+extern void plat_init_early(void);
+void __attribute__((weak)) plat_init_early(void)
+{
+	return;
+};
 
 /*
 *********************************************************************************************************
@@ -132,7 +146,7 @@ void startup_entry(void)
 {
 	dtb_base_init();
 
-	jtag_init();
+	plat_init_early();
 
 	notifier_init();
 	save_state_flag(REC_HOTPULG | 0x0);
@@ -191,15 +205,20 @@ void startup_entry(void)
 
 	/* feedback the startup state to ac327 */
 	startup_state_notify(OK);
-
 	platform_dts_parse_late();
-
 	set_paras();
 	save_state_flag(REC_HOTPULG | 0xf);
 	LOG("startup feedback ok\n");
 
-	LOG("ar100 firmware version : %s\n", SUB_VER);
+	hdmi_init();
+	save_state_flag(REC_HOTPULG | 0x10);
+	LOG("ar100 hdmi init done\n");
 
+	ndma_init();
+	save_state_flag(REC_HOTPULG | 0x11);
+	LOG("dma driver ok\n");
+
+	LOG("ar100 firmware version : %s\n", SUB_VER);
 	/* enter daemon process main. */
 	daemon_main();
 

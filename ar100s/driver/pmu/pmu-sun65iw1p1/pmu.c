@@ -19,12 +19,19 @@
 
 #include <libfdt.h>
 #include "pmu_i.h"
+#include "irq_table.h"
 
 #define WATCHDOG_KEYFIELD (0x16aa << 16)
-
 #define SUNXI_CHARGING_FLAG (0x61)
+#define HOT_RESET_HEAD_MAGIC    (0x5A5A5A5A)
+#define HOT_RESET_TAIL_MAGIC    (0xA5A5A5A5)
 
 extern u32 dtb_base;
+
+/* dram para */
+extern uint32_t dts_dram_para[];
+extern uint32_t dram_head_magic;
+extern uint32_t dram_tail_magic;
 
 #if defined CFG_AXP2202_USED
 extern pmu_ops_t pmu_axp2202_ops;
@@ -32,13 +39,14 @@ static pmu_ops_t *pmu_ops_p = &pmu_axp2202_ops;
 u32 axp_power_max = AXP2202_POWER_MAX;
 u32 pmu_runtime_addr = RSB_RTSADDR_AXP2202_B;
 #else
-#error "sun60iw2p1 not support no pmu"
+#error "sun65iw1p1 not support no pmu"
 #endif
 
 extern struct arisc_para arisc_para;
 extern struct notifier *wakeup_notify;
 
 void watchdog_reset(void);
+void prcm_reset(void);
 
 static u32 pmu_exist = FALSE;
 
@@ -77,6 +85,14 @@ void pmu_reset(void)
 
 	if (pmu_ops_p->pmu_reset)
 		pmu_ops_p->pmu_reset();
+
+	/* If the hot reset function is configured, then the SoC watchdog reset is used */
+	save_state_flag(REC_SHUTDOWN | 0x500);
+	dram_head_magic = HOT_RESET_HEAD_MAGIC;
+	dram_tail_magic = HOT_RESET_TAIL_MAGIC;
+	dram_power_save_process((void *)(&dts_dram_para[0]));
+	// watchdog_reset();
+	prcm_reset();
 }
 
 void pmu_charging_reset(void)
@@ -190,6 +206,41 @@ s32 pmu_reg_read_para(pmu_paras_t *para)
 
 void watchdog_reset(void)
 {
+	LOG("watchdog reset\n");
+
+	/* disable watchdog int */
+	writel(0x0, R_WDOG_REG_BASE + 0x0);
+
+	/* reset whole system */
+	writel((0x1 | (0x1 << 8) | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x10);
+
+	/* set reset after 0.5s */
+	writel(((0 << 4) | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x14);
+	mdelay(1);
+
+	/* enable watchdog */
+	writel((readl(R_WDOG_REG_BASE + 0x14) | 0x1 | WATCHDOG_KEYFIELD), R_WDOG_REG_BASE + 0x14);
+	while (1)
+		;
+}
+
+void prcm_reset(void)
+{
+	/* Switch CPUS domain clocks (AHBS/AHBS0/APBS1) to RC16M before PRCM reset to prevent CPUS hang during the reset process */
+	writel(0x02000000, AHBS_CFG_REG);
+	writel(0x02000000, APBS0_CFG_REG);
+	writel(0x02000000, APBS1_CFG_REG);
+
+	/* Use PRCM reset instead of WDT reset to maintain PRCM-related registers */
+	writel(0x0, VDD_SYS_PWR_RST_REG);
+	u32 i = 16000;
+	while (i--)
+		;
+	writel(0x1, VDD_SYS_PWR_RST_REG);
+
+	while (1) {
+		__asm volatile("wfi");
+	}
 }
 
 int nmi_int_handler(void *parg __attribute__ ((__unused__)), u32 intno)
@@ -213,7 +264,6 @@ static void pmu_init_from_dts(void)
 	ret = fdt_getprop_u32(fdt, pmu_node, "reg", &pmu_addr);
 	if (ret < 0)
 		return;
-
 	pmu_runtime_addr = pmu_addr;
 }
 #endif
@@ -248,25 +298,40 @@ u32 is_pmu_exist(void)
 	return pmu_exist;
 }
 
+static s32 nmi_int_enable(void)
+{
+	writel(readl(NMI_INT_EN_REG) | (1 << 1), NMI_INT_EN_REG);
+
+	return OK;
+}
+
+static s32 nmi_int_disable(void)
+{
+	writel(readl(NMI_INT_EN_REG) & (~(1 << 1)), NMI_INT_EN_REG);
+
+	return OK;
+}
+
+extern u32 volatile wakeup_source;
+s32 platform_nmi_handler(void *parg)
+{
+	nmi_int_disable();
+
+	wakeup_source = (GIC_R_EXTERNAL_NMI_IRQ - GIC_SRC_SPI);
+
+	return OK;
+}
+
 s32 pmu_standby_init(void)
 {
-	struct message message_ws;
-	u32 paras = GIC_R_EXTERNAL_NMI_IRQ - 32;
-
-	message_ws.paras = &paras;
-	set_wakeup_src(&message_ws);
+	nmi_int_enable();
 
 	return OK;
 }
 
 s32 pmu_standby_exit(void)
 {
-	struct message message_ws;
-	u32 paras = GIC_R_EXTERNAL_NMI_IRQ - 32;
-
-	message_ws.paras = &paras;
-	clear_wakeup_src(&message_ws);
+	nmi_int_disable();
 
 	return OK;
 }
-

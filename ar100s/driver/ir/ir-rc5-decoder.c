@@ -41,7 +41,7 @@ u32 ir_rc5_decode(ir_raw_buffer_t *ir_buffer)
 	u32 duration = 0;
 	u32 pulse = 0;
 
-	u32 toggle;
+	//u32 toggle;
 
 	struct rc5_dec data = {0, 0, 0, 0};
 
@@ -113,7 +113,7 @@ again:
 				xdata    = (data.bits & 0x0003F) >> 0;
 				command  = (data.bits & 0x00FC0) >> 6;
 				system   = (data.bits & 0x1F000) >> 12;
-				toggle   = (data.bits & 0x20000) ? 1 : 0;
+				//toggle   = (data.bits & 0x20000) ? 1 : 0;
 				command += (data.bits & 0x40000) ? 0 : 0x40;
 				scancode = system << 16 | command << 8 | xdata;
 
@@ -122,7 +122,7 @@ again:
 
 				command  = (data.bits & 0x0003F) >> 0;
 				system   = (data.bits & 0x007C0) >> 6;
-				toggle   = (data.bits & 0x00800) ? 1 : 0;
+				//toggle   = (data.bits & 0x00800) ? 1 : 0;
 				command += (data.bits & 0x01000) ? 0 : 0x40;
 				scancode = system << 8 | command;
 
@@ -131,7 +131,7 @@ again:
 
 				command  = (data.bits & 0x0003F) >> 0;
 				system   = (data.bits & 0x02FC0) >> 6;
-				toggle   = (data.bits & 0x01000) ? 1 : 0;
+				//toggle   = (data.bits & 0x01000) ? 1 : 0;
 				scancode = system << 6 | command;
 
 			} else {

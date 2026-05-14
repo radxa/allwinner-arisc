@@ -21,3 +21,5 @@ config FDT_INIT_ARISC_UART_USED
 	prompt "init arisc uart from fdt support"
 
 endmenu
+
+source "service/standby/fakepoweroff/Kconfig"

@@ -22,3 +22,9 @@ config HW_MSGBOX_AMP_USED
 	prompt "General MSGBOX base on rpmsg"
 	depends on MSGBOX_USED
 	def_bool n
+
+config HW_MSGBOX_RPM_API_USED
+	bool
+	prompt "Remote Processor Messaging API for TV"
+	depends on HW_MSGBOX_AMP_USED
+	def_bool n

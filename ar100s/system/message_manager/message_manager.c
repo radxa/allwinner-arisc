@@ -102,9 +102,14 @@ static s32 process_message(struct message *pmessage)
 			result = mctl_mdfs_software(&arisc_para.dram_para, pmessage->paras[0]);
 		break;
 
-		case MESSAGE_LOOPBACK:
+	case MESSAGE_LOOPBACK:
 		INF("loopback message request\n");
 		result = OK;
+		break;
+
+	case GET_PMU_WAKEUP_SRC_REQ:
+		INF("get pmu wakeup source\n");
+		result = get_pmu_irq(pmessage);
 		break;
 
 	default:

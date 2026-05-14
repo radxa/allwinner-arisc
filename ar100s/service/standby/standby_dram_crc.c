@@ -38,6 +38,11 @@ s32 standby_dram_crc_enable(void)
 
 u32 standby_dram_crc(void)
 {
+#ifdef CPUS_MM_DRAM_LBP
+	if (dram_crc_src < CPUS_MM_DRAM_LBP)
+		dram_crc_src = CPUS_MM_DRAM_LBP;
+#endif
+
 	u32 *pdata = (u32 *)(dram_crc_src);
 	u32 crc = 0;
 

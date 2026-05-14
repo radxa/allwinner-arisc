@@ -58,7 +58,16 @@
 #define LOG(...)
 #endif
 
-#define ASSERT(e)   (((void)0))
+#define ASSERT(expr) \
+	do { \
+		if (!(expr)) { \
+			ERR("assertion '%s' failed at %s:%d (func '%s')", \
+				#expr, __FILE__, __LINE__, __func__); \
+			while (1) \
+				; \
+		} \
+	} while (0)
+
 #define printk(...)    debugger_printf(0xf, __VA_ARGS__)
 
 #endif /*__DBGS_H__*/

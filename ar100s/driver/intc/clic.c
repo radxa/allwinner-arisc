@@ -178,8 +178,6 @@ s32 intc_set_mask(u32 intno, u32 mask)
 
 s32 intc_set_group_config(u32 grp_irq_num, u32 mask)
 {
-	ASSERT(grp_irq_num < GRP_IRQ_MAX);
-
 	u32 bit_os = grp_irq_num % 32;
 	u32 reg_os = (grp_irq_num / 32) * 0x4;
 	u32 reg = R_INTC_REG_BASE + 0xc0 + reg_os;

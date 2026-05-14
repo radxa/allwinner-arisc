@@ -13,7 +13,7 @@
  * used for next evb version by config IR_24M_USED 0
  */
 
-#if CFG_SUN55IW3P1
+#if defined(CFG_SUN55IW3P1) || defined(CFG_SUN55IW7P1)
 #define IR_24M_USED             (0)
 #else
 #define IR_24M_USED             (1)

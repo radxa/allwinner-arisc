@@ -23,31 +23,43 @@
  * only called by bmu common function.
  */
 
-static void bmu_axp519_reset(void)
+static void bmu_axp519_clear_irq(void)
 {
 	u8 devaddr = RSB_RTSADDR_AXP519;
-	u8 regaddr = AXP519_IRQ0;
+	u8 regaddr = AXP519_IRQ_EN0;
 	u8 data = 0xFF;
 
-	save_state_flag(REC_SHUTDOWN | 0x401);
+	save_state_flag(REC_SHUTDOWN | 0x400);
 
+	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+	regaddr = AXP519_IRQ_EN1;
+	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+
+	regaddr = AXP519_IRQ0;
 	pmu_reg_write(&devaddr, &regaddr, &data, 1);
 	regaddr = AXP519_IRQ1;
 	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+
+	regaddr = AXP519_IRQ_EN0;
+	data = 0xF7;
+	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+}
+
+static void bmu_axp519_reset(void)
+{
+	save_state_flag(REC_SHUTDOWN | 0x401);
+
+	bmu_axp519_clear_irq();
+
 	LOG("reset axp519\n");
 }
 
 static void bmu_axp519_shutdown(void)
 {
-	u8 devaddr = RSB_RTSADDR_AXP519;
-	u8 regaddr = AXP519_IRQ0;
-	u8 data = 0xFF;
-
 	save_state_flag(REC_SHUTDOWN | 0x402);
 
-	pmu_reg_write(&devaddr, &regaddr, &data, 1);
-	regaddr = AXP519_IRQ1;
-	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+	bmu_axp519_clear_irq();
+
 	LOG("close axp519 batfet\n");
 }
 
@@ -62,11 +74,15 @@ static s32 bmu_axp519_charging_vbus_det(void)
 	pmu_reg_read(&devaddr, &regaddr, &val, 1);
 	/* vbus presence */
 	if ((val & 0x01) == 0x01) {
-		regaddr = AXP519_CHG_SET1;
+		regaddr = AXP519_WORK_CFG;
 		pmu_reg_read(&devaddr, &regaddr, &val, 1);
+		if (!(val & 0x01)) {
+			regaddr = AXP519_CHG_SET1;
+			pmu_reg_read(&devaddr, &regaddr, &val, 1);
 
-		if (!(val & 0x40)) {
-			return OK;
+			if (!(val & 0x40)) {
+				return OK;
+			}
 		}
 	}
 	return FAIL;

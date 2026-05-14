@@ -12,7 +12,14 @@
 #include "include.h"
 
 extern u32 dtb_base;
-uint32_t dts_dram_para[96];
+
+#ifndef CFG_HOT_REBOOT
+uint32_t dts_dram_para[160];
+#else
+uint32_t dram_head_magic __attribute__((section(".dram_head_magic"), used));
+uint32_t dts_dram_para[160] __attribute__((section(".dts_dram_para"), used));
+uint32_t dram_tail_magic __attribute__((section(".dram_tail_magic"), used));
+#endif
 
 uint32_t *dram_dts_parse(void)
 {

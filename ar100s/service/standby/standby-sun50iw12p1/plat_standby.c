@@ -975,3 +975,9 @@ s32 fake_poweroff(struct message *pmessage)
 
 	return 0;
 }
+
+/* feedback pmu irq */
+s32 get_pmu_irq(struct message *pmessage)
+{
+	return OK;
+}

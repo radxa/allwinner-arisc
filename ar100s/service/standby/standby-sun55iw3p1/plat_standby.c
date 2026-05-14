@@ -18,6 +18,7 @@
 */
 #include <libfdt.h>
 #include "../standby_i.h"
+#include "../../../driver/pmu/pmu_i.h"
 #include "wakeup_source.h"
 #include "cpucfg_regs.h"
 
@@ -92,6 +93,32 @@ enum bus_clock_mode {
 	pll_peri0 = 3,
 	clock_bak = 4
 };
+
+/* axp2202 dcdc3(dram) - pwm */
+static void axp_dcdc_mode_set(int on)
+{
+#if defined CFG_AXP2202_USED
+	static u8 axp_dcdc3_pwm;
+	static u32 pwm_has_parsed;
+	u8 devaddr = RSB_RTSADDR_AXP2202;
+	u8 regaddr = AXP2202_DCDC_CFG1;
+	u8 data;
+
+	if (!pwm_has_parsed) {
+		pmu_reg_read(&devaddr, &regaddr, &axp_dcdc3_pwm, 1);
+		pwm_has_parsed = 1;
+	}
+
+	if (axp_dcdc3_pwm & (1 << 4)) {
+		if (!on) {
+			data = axp_dcdc3_pwm & (~(1 << 4));
+			pmu_reg_write(&devaddr, &regaddr, &data, 1);
+		} else {
+		pmu_reg_write(&devaddr, &regaddr, &axp_dcdc3_pwm, 1);
+		}
+	}
+#endif
+}
 
 static void suspend_para_prepare(void)
 {
@@ -359,6 +386,8 @@ static void wait_cpu0_resume(void)
 	wakeup_source = NO_WAKESOURCE;
 }
 
+/* sun55iw3 platform cpus not support more than 32 power yet */
+#define AXP_POWER_MAX (32)
 static void dm_suspend(void)
 {
 	u32 type;
@@ -367,40 +396,56 @@ static void dm_suspend(void)
 		return;
 
 	/* vdd-ndr powerdown */
-	for (type = 0; type < pmu_ext_power_max; type++) {
-		if ((standby_vdd_ndr >> type) & 0x1)
-			pmu_ext_set_voltage_state(type, POWER_VOL_OFF);
+	if (pmu_ext_power_max) {
+		for (type = 0; type < pmu_ext_power_max; type++) {
+			if ((standby_vdd_ndr >> type) & 0x1)
+				pmu_ext_set_voltage_state(type, POWER_VOL_OFF);
+		}
+	} else {
+		for (type = 0; type < AXP_POWER_MAX; type++) {
+			if ((standby_vdd_ndr >> type) & 0x1)
+				pmu_set_voltage_state(type, POWER_VOL_OFF);
+		}
 	}
 
 	/* vdd-cpub powerdown */
-	for (type = 0; type < pmu_ext_power_max; type++) {
-		if ((standby_vdd_cpub >> type) & 0x1)
-			pmu_ext_set_voltage_state(type, POWER_VOL_OFF);
+	if (pmu_ext_power_max) {
+		for (type = 0; type < pmu_ext_power_max; type++) {
+			if ((standby_vdd_cpub >> type) & 0x1)
+				pmu_ext_set_voltage_state(type, POWER_VOL_OFF);
+		}
+	} else {
+		for (type = 0; type < AXP_POWER_MAX; type++) {
+			if ((standby_vdd_cpub >> type) & 0x1)
+				pmu_set_voltage_state(type, POWER_VOL_OFF);
+		}
 	}
 
 	/* vdd-io powerdown */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vcc_io >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_OFF);
 	}
 
 	/* vdd-cpu powerdown */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vdd_cpu >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_OFF);
 	}
 
 	/* vdd-sys powerdown */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vdd_sys >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_OFF);
 	}
 
 	/* vcc-pll powerdown */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vcc_pll >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_OFF);
 	}
+
+	axp_dcdc_mode_set(0);
 
 	if (pmu_latency_ms)
 		time_mdelay(pmu_latency_ms);
@@ -413,40 +458,57 @@ static void dm_resume(void)
 	if (ic_version_a)
 		return;
 
+	axp_dcdc_mode_set(1);
+
 	/* vcc-pll powerup */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vcc_pll >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_ON);
 	}
 
 	/* vdd-sys powerup */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vdd_sys >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_ON);
 	}
 
 	/* vdd-cpu powerup */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vdd_cpu >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_ON);
 	}
 
 	/* vdd-io powerup */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vcc_io >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_ON);
 	}
 
 	/* vdd-cpub powerup */
-	for (type = 0; type < pmu_ext_power_max; type++) {
-		if ((standby_vdd_cpub >> type) & 0x1)
-			pmu_ext_set_voltage_state(type, POWER_VOL_ON);
+	if (pmu_ext_power_max) {
+		for (type = 0; type < pmu_ext_power_max; type++) {
+			if ((standby_vdd_cpub >> type) & 0x1)
+				pmu_ext_set_voltage_state(type, POWER_VOL_ON);
+		}
+	} else {
+		for (type = 0; type < AXP_POWER_MAX; type++) {
+			if ((standby_vdd_cpub >> type) & 0x1)
+				pmu_set_voltage_state(type, POWER_VOL_ON);
+		}
 	}
 
 	/* vdd-ndr powerup */
-	for (type = 0; type < pmu_ext_power_max; type++) {
-		if ((standby_vdd_ndr >> type) & 0x1)
-			pmu_ext_set_voltage_state(type, POWER_VOL_ON);
+	if (pmu_ext_power_max) {
+		for (type = 0; type < pmu_ext_power_max; type++) {
+			if ((standby_vdd_ndr >> type) & 0x1)
+				pmu_ext_set_voltage_state(type, POWER_VOL_ON);
+		}
+	} else {
+		for (type = 0; type < AXP_POWER_MAX; type++) {
+			if ((standby_vdd_ndr >> type) & 0x1)
+				pmu_set_voltage_state(type, POWER_VOL_ON);
+		}
+
 	}
 }
 
@@ -464,7 +526,7 @@ static void aldo_suspend_resume(void)
 	writel(readl(ADDA_POWER_REG) | (1 << 15), ADDA_POWER_REG);
 
 	/* vcc-pll powerdown */
-	for (type = 0; type < axp_power_max; type++) {
+	for (type = 0; type < AXP_POWER_MAX; type++) {
 		if ((standby_vcc_pll >> type) & 0x1)
 			pmu_set_voltage_state(type, POWER_VOL_OFF);
 	}
@@ -472,7 +534,7 @@ static void aldo_suspend_resume(void)
 	time_mdelay(150);
 
 	/* vcc-pll powerup */
-	for (type = 0; (type < axp_power_max) && aldo_fix_need; type++) {
+	for (type = 0; (type < AXP_POWER_MAX) && aldo_fix_need; type++) {
 		if ((standby_vcc_pll >> type) & 0x1) {
 			pmu_set_voltage_state(type, POWER_VOL_ON);
 		}
@@ -1102,14 +1164,14 @@ void cpu_pll_on(void)
 #endif
 
 	/* set cpua,cpub,dpu clk */
-	writel((readl(CPUA_CLK_REG) | (cpu_clk_restore_bak[0] & CPU_FACTOR_MASK)), CPUA_CLK_REG);
-	writel((readl(CPUA_CLK_REG) | (cpu_clk_restore_bak[0] & CPU_CLK_SRC_SEL_MASK)), CPUA_CLK_REG);
+	writel(((readl(CPUA_CLK_REG) & (~CPU_FACTOR_MASK)) | (cpu_clk_restore_bak[0] & CPU_FACTOR_MASK)), CPUA_CLK_REG);
+	writel(((readl(CPUA_CLK_REG) & (~CPU_CLK_SRC_SEL_MASK)) | (cpu_clk_restore_bak[0] & CPU_CLK_SRC_SEL_MASK)), CPUA_CLK_REG);
 
-	writel((readl(CPUB_CLK_REG) | (cpu_clk_restore_bak[1] & CPU_FACTOR_MASK)), CPUB_CLK_REG);
-	writel((readl(CPUB_CLK_REG) | (cpu_clk_restore_bak[1] & CPU_CLK_SRC_SEL_MASK)), CPUB_CLK_REG);
+	writel(((readl(CPUB_CLK_REG) & (~CPU_FACTOR_MASK)) | (cpu_clk_restore_bak[1] & CPU_FACTOR_MASK)), CPUB_CLK_REG);
+	writel(((readl(CPUB_CLK_REG) & (~CPU_CLK_SRC_SEL_MASK)) | (cpu_clk_restore_bak[1] & CPU_CLK_SRC_SEL_MASK)), CPUB_CLK_REG);
 
-	writel((readl(DCU_CLK_REG) | (cpu_clk_restore_bak[2] & DCU_FACTOR_P_MASK)), DCU_CLK_REG);
-	writel((readl(DCU_CLK_REG) | (cpu_clk_restore_bak[2] & DCU_CLK_SRC_SEL_MASK)), DCU_CLK_REG);
+	writel(((readl(DCU_CLK_REG) & (~DCU_FACTOR_P_MASK)) | (cpu_clk_restore_bak[2] & DCU_FACTOR_P_MASK)), DCU_CLK_REG);
+	writel(((readl(DCU_CLK_REG) & (~DCU_CLK_SRC_SEL_MASK)) | (cpu_clk_restore_bak[2] & DCU_CLK_SRC_SEL_MASK)), DCU_CLK_REG);
 }
 
 static void system_suspend(void)
@@ -1375,6 +1437,7 @@ int sys_op(struct message *pmessage)
 	case arisc_system_shutdown:
 		{
 			save_state_flag(REC_SHUTDOWN | 0x101);
+			pmu_ext_shutdown();
 			pmu_charging_reset();
 			system_shutdown();
 			break;
@@ -1383,12 +1446,14 @@ int sys_op(struct message *pmessage)
 	case arisc_system_reboot:
 		{
 			save_state_flag(REC_SHUTDOWN | 0x102);
+			pmu_ext_shutdown();
 			system_reset();
 			break;
 		}
 	case arisc_uboot_shutdown:
 		{
 			save_state_flag(REC_SHUTDOWN | 0x103);
+			pmu_ext_shutdown();
 			system_shutdown();
 			break;
 		}
@@ -1483,4 +1548,10 @@ s32 fake_poweroff(struct message *pmessage)
 	system_reset();
 
 	return 0;
+}
+
+/* feedback pmu irq */
+s32 get_pmu_irq(struct message *pmessage)
+{
+	return OK;
 }

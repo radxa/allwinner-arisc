@@ -22,4 +22,6 @@
 
 #include "include.h"
 
+extern u32 bmu_runtime_addr;
+
 #endif  /* __PMU_I_H__ */

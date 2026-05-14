@@ -46,6 +46,20 @@ config SUN55IW3P1
 	select AR100S_OS
 	prompt "AW1890 sun55iw3p1 A523 platform"
 
+config SUN55IW6P1
+	bool
+	imply CPUX_ARM64
+	select RISCV
+	select AR100S_OS
+	prompt "AW1903 sun60iw2p1 TI533 platform"
+
+config SUN55IW7P1
+	bool
+	imply CPUX_ARM64
+	select RISCV
+	select AR100S_OS
+	prompt "AW1938 sun55iw7p1 H628 platform"
+
 config SUN60IW1P1
 	bool
 	imply CPUX_ARM64
@@ -67,6 +81,13 @@ config SUN65IW1P1
 	select RISCV
 	select AR100S_OS
 	prompt "AW1919 sun65iw1p1 A537 platform"
+
+config SUN252IW3P1
+	bool
+	imply CPUX_ARM64
+	select RISCV
+	select AR100S_OS
+	prompt "AW1932 sun252iw3p1 V883 platform"
 
 config SUN8IW12P1
 	bool
@@ -105,9 +126,12 @@ config CHIP_PLATFORM
 	default "sun50iw10p1" if SUN50IW10P1
 	default "sun50iw12p1" if SUN50IW12P1
 	default "sun55iw3p1" if SUN55IW3P1
+	default "sun55iw6p1" if SUN55IW6P1
+	default "sun55iw7p1" if SUN55IW7P1
 	default "sun60iw1p1" if SUN60IW1P1
 	default "sun65iw1p1" if SUN65IW1P1
 	default "sun60iw2p1" if SUN60IW2P1
+	default "sun252iw3p1" if SUN252IW3P1
 	default "sun8iw12p1" if SUN8IW12P1
 	default "sun8iw15p1" if SUN8IW15P1
 	default "sun8iw16p1" if SUN8IW16P1

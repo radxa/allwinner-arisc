@@ -46,12 +46,14 @@ s32 set_wakeup_src(struct message *pmessage);
 s32 clear_wakeup_src(struct message *pmessage);
 void wakeup_timer_start(void);
 void wakeup_timer_stop(void);
+s32 get_pmu_irq(struct message *pmessage);
 #else
 static inline s32 wakeup_timer_init(void) { return -1; }
 static inline s32 set_wakeup_src(struct message *pmessage) { return -1; }
 static inline s32 clear_wakeup_src(struct message *pmessage) { return -1; }
 static inline void wakeup_timer_start(void) { return; }
 static inline void  wakeup_timer_stop(void) { return; }
+static inline s32 get_pmu_irq(struct message *pmessage) { return -1; }
 #endif
 
 #endif

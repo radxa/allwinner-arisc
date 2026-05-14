@@ -25,81 +25,35 @@
  * r_intc interrupt source
  * ------------------------------------------------------------------------------
  */
-#define INTC_R_NMI_IRQ          0
-#define INTC_R_TIMER0_IRQ       CLIC_SRC_RV_TIMER0
-#define INTC_R_TIMER1_IRQ       CLIC_SRC_RV_TIMER1
-#define INTC_R_TIMER2_IRQ       CLIC_SRC_RV_TIMER2
-#define INTC_R_TIMER3_IRQ       CLIC_SRC_RV_TIMER3
-#define INTC_R_ALM0_IRQ         9
-#define INTC_R_WDT0_IRQ         11
-#define INTC_R_WDT1_IRQ         12
-#define INTC_R_PPU0_IRQ         13
-#define INTC_R_GPIOL_NS_IRQ     14
-#define INTC_R_GPIOL_S_IRQ      15
-#define INTC_R_GPIOM_NS_IRQ     16
-#define INTC_R_GPIOM_S_IRQ      17
-#define INTC_R_USB_IRQ          18
-#define INTC_R_PPU1_IRQ         19
-#define INTC_R_UART_IRQ         21
-#define INTC_TWI0_IRQ           26
-#define INTC_TWI1_IRQ           27
-#define INTC_R_IRRX_IRQ         32
-#define INTC_R_PWM_IRQ          36
-#define INTC_R_TZMA_IRQ         37
-#define INTC_PCK600_IRQ         38
-#define INTC_AHBS_HREADY_IRQ    39
-#define INTC_R_SPI_IRQ          40
-#define INTC_SPINLOCK_IRQ       41
-#define INTC_MBOX_IRQ           42
-#define INTC_GINT0_IRQ          71
-#define INTC_GINT1_IRQ          72
-#define INTC_GINT2_IRQ          73
-#define INTC_GINT3_IRQ          74
-#define INTC_GINT4_IRQ          75
-#define INTC_GINT5_IRQ          76
-#define INTC_GINT6_IRQ          77
-#define INTC_GINT7_IRQ          78
-#define INTC_GINT8_IRQ          79
-#define INTC_GINT9_IRQ          80
-#define INTC_GINT10_IRQ         81
-#define INTC_GINt11_IRQ         82
-#define INTC_GINt12_IRQ         83
-#define INTC_GINT13_IRQ         84
-#define INTC_GINT14_IRQ         85
-#define INTC_GINT15_IRQ         86
-#define INTC_GINT16_IRQ         87
-#define INTC_GINT17_IRQ         88
-#define INTC_GINT18_IRQ         89
-
-#define CLIC_SRC_SPI(_n)			(16 + (_n))
-
-#define CLIC_SRC_RV_TIMER0			CLIC_SRC_SPI(20-16)
-#define CLIC_SRC_RV_TIMER1			CLIC_SRC_SPI(21-16)
-#define CLIC_SRC_RV_TIMER2			CLIC_SRC_SPI(22-16)
-#define CLIC_SRC_RV_TIMER3			CLIC_SRC_SPI(23-16)
+#define INTC_R_NMI_IRQ		0
+#define INTC_R_TIMER0_IRQ	20
+#define INTC_R_TIMER1_IRQ	21
+#define INTC_R_ALM0_IRQ		24
+#define INTC_R_GPIOL_S_IRQ	25
+#define INTC_R_GPIOL_NS_IRQ	26
+#define INTC_R_GPIOM_S_IRQ	27
+#define INTC_R_GPIOM_NS_IRQ	28
+#define INTC_R_UART_IRQ		29
+#define INTC_R_IRRX_IRQ		34
+#define INTC_R_USB_IRQ		46
+#define IRQ_SOUCE_MAX		(INTC_R_USB_IRQ + 1)
 
 /*
  * ------------------------------------------------------------------------------
  * gic interrupt source
  * ------------------------------------------------------------------------------
  */
-#define GIC_USB0_EHCI_IRQ  62
-#define GIC_USB0_OHCI_IRQ  63
-#define GIC_USB1_EHCI_IRQ  64
-#define GIC_USB1_OHCI_IRQ  65
-#define GIC_R_EXTERNAL_NMI_IRQ  180
-#define GIC_R_ALARM0_IRQ        189
-#define GIC_R_GPIOL_S_IRQ  190
-#define GIC_R_GPIOL_NS_IRQ 191
-#define GIC_R_GPIOM_S_IRQ  192
-#define GIC_R_GPIOM_NS_IRQ 193
-#define GIC_R_IR_IRQ       199
+#define GIC_USB0_EHCI_IRQ	101
+#define GIC_USB0_OHCI_IRQ	102
+#define GIC_USB1_EHCI_IRQ	103
+#define GIC_USB1_OHCI_IRQ	104
+#define GIC_R_EXTERNAL_NMI_IRQ	256
+#define GIC_R_ALARM0_IRQ	264
+#define GIC_R_GPIOL_S_IRQ	265
+#define GIC_R_GPIOL_NS_IRQ	266
+#define GIC_R_GPIOM_S_IRQ	267
+#define GIC_R_GPIOM_NS_IRQ	268
+#define GIC_R_IR_IRQ		274
 
-/*
- *------------------------------------------------------------------------------
- * the max interrupt source number
- *------------------------------------------------------------------------------
- */
-#define IRQ_SOUCE_MAX           44
 
 #endif	/*__IRQNUM_CONFIG_H__*/

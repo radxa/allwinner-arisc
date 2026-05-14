@@ -80,11 +80,14 @@ static uint32_t standby_vdd_usb;
 static uint32_t standby_osc24m_on = 1;
 
 /* dram para */
-extern uint32_t dts_dram_para[96];
+extern uint32_t dts_dram_para[];
 
 /* backup cpu PLL */
 static u32 cpu_pll_restore_bak[4] = {0};
 static u32 cpu_clk_restore_bak[3] = {0};
+static u32 cpu_pll_pat0_restore_bak[4] = {0};
+static u32 cpu_pll_pat1_restore_bak[4] = {0};
+static u32 cpu_pll_lfm_restore_bak[3] = {0};
 
 /* timer_stamp paras */
 static uint32_t timestamp_cnt_low_bak;
@@ -113,7 +116,12 @@ typedef struct BUS_PAMA {
 rBUS_PAMA bus_restore[7];
 
 /* nsi/mbus/trace/gic addr */
-static uint32_t bus_ctl_restore[4];
+typedef struct SYS_BUS_PAMA {
+	u32 busAddr;
+	u8 bus_clk_src;
+	u8 M;
+} SYS_BUS_CLK;
+SYS_BUS_CLK bus_ctl_restore[4];
 
 
 enum bus_clock_mode {
@@ -243,10 +251,10 @@ static void suspend_para_prepare(void)
 	bus_restore[5].busAddr = APBS0_CFG_REG;
 	bus_restore[6].busAddr = APBS1_CFG_REG;
 
-	bus_ctl_restore[0] = CCU_NSI_CFG_REG;
-	bus_ctl_restore[1] = CCU_MBUS_CLK_REG;
-	bus_ctl_restore[2] = CCU_GIC_CFG_REG;
-	bus_ctl_restore[3] = CCU_TRACE_CFG_REG;
+	bus_ctl_restore[0].busAddr = CCU_NSI_CFG_REG;
+	bus_ctl_restore[1].busAddr = CCU_MBUS_CLK_REG;
+	bus_ctl_restore[2].busAddr = CCU_GIC_CFG_REG;
+	bus_ctl_restore[3].busAddr = CCU_TRACE_CFG_REG;
 	/* apbs1 need separate recovery */
 	//pmu_ext_power_max = pmu_ext_is_exist();
 	para_has_parsed = 1;
@@ -847,7 +855,7 @@ static void all_pll_set(enum pll_state sta)
 		time_udelay(20);
 		for (i = 0; i < (sizeof(pll_restore) / sizeof(pll_restore[0])); i++) {
 			reg_val = readl(pll_restore[i].addr);
-			reg_val |= 1 << PLL_OUTPUT_ENABLE_SHIFT;
+			reg_val |= PLL_OUTPUT_ENABLE_MASK;
 			writel(reg_val, pll_restore[i].addr);
 		}
 	}
@@ -898,21 +906,37 @@ static void bus_clock_ctl(enum bus_clock_mode mode, enum bus_clock_mode control)
 		end_tick = tg_end_tick;
 	}
 	for (bus_tick = start_tick; bus_tick < end_tick; bus_tick++) {
-		reg_val = readl(bus_ctl_restore[bus_tick]);
+		reg_val = readl(bus_ctl_restore[bus_tick].busAddr);
 		if (mode == clock_bak) {
-			reg_val = readl(bus_ctl_restore[bus_tick]);
+			reg_val = readl(bus_ctl_restore[bus_tick].busAddr);
 			reg_val &= (~(1 << 31));
 			reg_val |= (1 << 31);
-			writel(reg_val, bus_ctl_restore[bus_tick]);
+			writel(reg_val, bus_ctl_restore[bus_tick].busAddr);
+
+			reg_val |=  bus_ctl_restore[bus_tick].M;
+			reg_val |= (1 << 27);
+			writel(reg_val, bus_ctl_restore[bus_tick].busAddr);
+
+			reg_val &= ~(0x7 << 24);
+			reg_val |=  bus_ctl_restore[bus_tick].bus_clk_src << 24;
+			reg_val |= (1 << 27);
+			writel(reg_val, bus_ctl_restore[bus_tick].busAddr);
+
 		} else {
-			reg_val = readl(bus_ctl_restore[bus_tick]);
+			bus_ctl_restore[bus_tick].bus_clk_src = (reg_val & (0x7 << 24)) >> 24;
+			bus_ctl_restore[bus_tick].M = (reg_val & 0x3ff);
+
+			reg_val = readl(bus_ctl_restore[bus_tick].busAddr);
+
+			reg_val = readl(bus_ctl_restore[bus_tick].busAddr);
 			reg_val &= (~(0x7 << 24));
-			writel(reg_val, bus_ctl_restore[bus_tick]);
+			writel(reg_val, bus_ctl_restore[bus_tick].busAddr);
 			reg_val &= (~(0x1f << 0));
-			writel(reg_val, bus_ctl_restore[bus_tick]);
+			writel(reg_val, bus_ctl_restore[bus_tick].busAddr);
 			reg_val &= (~(1 << 31));
 			reg_val |= (0 << 31);
-			writel(reg_val, bus_ctl_restore[bus_tick]);
+			writel(reg_val, bus_ctl_restore[bus_tick].busAddr);
+
 		}
 	}
 }
@@ -984,16 +1008,47 @@ static void clk_resume(void)
 	bus_clock_set(clock_bak, ccmu_clk);
 }
 
+#define CPUPLL_DEBUGx
+#ifdef CPUPLL_DEBUG
+static void dbg_log(void)
+{
+	int i;
+	LOG("CPUA_CLK_REG 0x%x\n", readl(CPUA_CLK_REG));
+	LOG("CPUB_CLK_REG 0x%x\n", readl(CPUB_CLK_REG));
+	LOG("DSU_CLK_REG 0x%x\n", readl(DSU_CLK_REG));
+	for (i = 0; i < 4; i++) {
+		LOG("CPU_PLL_PAT0_REG[%d] 0x%x\n", i, readl(CPU_PLL_PAT0_REG(i)));
+		LOG("CPU_PLL_PAT1_REG[%d] 0x%x\n", i, readl(CPU_PLL_PAT1_REG(i)));
+		/* CPU BACK PLL hasn't LFM reg */
+		if (i)
+			LOG("CPU_PLL_LFM_REG[%d] 0x%x\n", i - 1, readl(CPU_PLL_LFM_REG(i - 1)));
+		LOG("CPU_PLL_REG[%d] 0x%x\n", i, readl(CPU_PLL_REG(i)));
+	}
+}
+#else
+#define dbg_log()
+#endif
+
 /*standby power off cpu*/
 static void cpu_pll_off(void)
 {
 	int i;
 
 	LOG("cpu off \n");
+	dbg_log();
 	/* backup cpua,dsu clk */
 	cpu_clk_restore_bak[0] = readl(CPUA_CLK_REG);
 	cpu_clk_restore_bak[1] = readl(CPUB_CLK_REG);
 	cpu_clk_restore_bak[2] = readl(DSU_CLK_REG);
+
+	for (i = 0; i < 4; i++) {
+		cpu_pll_pat0_restore_bak[i] = readl(CPU_PLL_PAT0_REG(i));
+		cpu_pll_pat1_restore_bak[i] = readl(CPU_PLL_PAT1_REG(i));
+		/* CPU BACK PLL hasn't LFM reg */
+		if (i)
+			cpu_pll_lfm_restore_bak[i - 1] = readl(CPU_PLL_LFM_REG(i - 1));
+		cpu_pll_restore_bak[i] = readl(CPU_PLL_REG(i));
+	}
 
 	/* set cpu clk rc16m */
 	writel(((readl(CPUA_CLK_REG) & (~CPU_CLK_SRC_SEL_MASK)) | CPU_CLK_SRC_SEL(2)), CPUA_CLK_REG);
@@ -1009,10 +1064,10 @@ static void cpu_pll_off(void)
 	/* close cpu pll :include cpu core and the dsu */
 	for (i = 0; i < 4; i++) {
 		cpu_pll_restore_bak[i] = readl(CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) & ~CPU_PLL_OUTPUT), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) & ~CPU_PLL_LOCK_EN), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) & ~CPU_PLL_EN), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) & ~CPU_PLL_LDO_EN), CPU_PLL_REG(i));
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_OUTPUT_MASK)) | CPU_PLL_OUTPUT(0)), CPU_PLL_REG(i));
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_LOCK_EN_MASK)) | CPU_PLL_LOCK_EN(0)), CPU_PLL_REG(i));
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_EN_MASK)) | CPU_PLL_EN(0)), CPU_PLL_REG(i));
+		writel((readl((CPU_PLL_REG(i)) & (~CPU_PLL_LDO_EN_MASK)) | CPU_PLL_LDO_EN(0)), CPU_PLL_REG(i));
 	}
 }
 
@@ -1039,11 +1094,13 @@ static int sunxi_get_soc_ver(void)
 /*standby power on cpu*/
 static void cpu_pll_on(void)
 {
-	int i;
+	int i, j;
+	u32 val;
 
 	LOG("cpu on \n");
 
 	/* step0: set pll-ldo */
+
 	if (sunxi_get_soc_ver() == SUNXI_SOC_VER_A) {
 		// VERA set pll-ldo 1.02V
 		writel(0xA7070025, CPUSUBSYS_REG_BASE + PLL_CTRL1_REG_OFFSET);
@@ -1058,35 +1115,35 @@ static void cpu_pll_on(void)
 	/* step1: set cpu pll on */
 	for (i = 0; i < 4; i++) {
 		/* set pll on */
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_LDO_EN), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_OUTPUT), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_EN), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_LOCK_EN), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_UPDATE), CPU_PLL_REG(i));
+		writel((readl((CPU_PLL_REG(i)) & (~CPU_PLL_LDO_EN_MASK)) | CPU_PLL_LDO_EN(1)), CPU_PLL_REG(i));
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_OUTPUT_MASK)) | CPU_PLL_OUTPUT(1)), CPU_PLL_REG(i));
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_EN_MASK)) | CPU_PLL_EN(1)), CPU_PLL_REG(i));
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_LOCK_EN_MASK)) | CPU_PLL_LOCK_EN(1)), CPU_PLL_REG(i));
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_UPDATE_MASK)) | CPU_PLL_UPDATE(1)), CPU_PLL_REG(i));
 
-		while (!(readl(CPU_PLL_REG(i)) & CPU_PLL_LOCK_STATUS))
+		/* wait PLL_UPDATE 0 */
+		while ((readl(CPU_PLL_REG(i)) & CPU_PLL_UPDATE_MASK))
 			;
+
+		/* wait pll lock three times */
+		for (j = 0; j < 3; j++) {
+			while (!(readl(CPU_PLL_REG(i)) & CPU_PLL_LOCK_STATUS_MASK))
+				;
+		}
+		time_udelay(20);
 	}
 
 	time_mdelay(20);
 
+	/* step2: resume LFM and PAT0/1 regs */
 	for (i = 0; i < 4; i++) {
-		writel((readl(CPU_PLL_REG(i)) & ~CPU_PLL_OUTPUT), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) & (~CPU_PLL_FACTOR_MASK)) | (cpu_pll_restore_bak[i] & CPU_PLL_FACTOR_MASK), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) & ~CPU_PLL_LOCK_EN), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_LOCK_EN), CPU_PLL_REG(i));
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_UPDATE), CPU_PLL_REG(i));
-		while ((readl(CPU_PLL_REG(i)) & CPU_PLL_UPDATE))
-			;
-
-		while (!(readl(CPU_PLL_REG(i)) & CPU_PLL_LOCK_STATUS))
-			;
-
-		time_mdelay(20);
-		writel((readl(CPU_PLL_REG(i)) | CPU_PLL_OUTPUT), CPU_PLL_REG(i));
+		writel(cpu_pll_pat0_restore_bak[i], CPU_PLL_PAT0_REG(i));
+		writel(cpu_pll_pat1_restore_bak[i], CPU_PLL_PAT1_REG(i));
+		if (i)
+			writel(cpu_pll_lfm_restore_bak[i - 1], CPU_PLL_LFM_REG(i - 1));
 	}
 
-	/* set cpua,dsu clk */
+	/* step3: resume CPUx pll config */
 	writel(((readl(CPUA_CLK_REG) & (~CPU_FACTOR_P_MASK)) | (cpu_clk_restore_bak[0] & CPU_FACTOR_P_MASK)), CPUA_CLK_REG);
 	writel(((readl(CPUA_CLK_REG) & (~CPU_CLK_SRC_SEL_MASK)) | (cpu_clk_restore_bak[0] & CPU_CLK_SRC_SEL_MASK)), CPUA_CLK_REG);
 
@@ -1095,6 +1152,35 @@ static void cpu_pll_on(void)
 
 	writel(((readl(DSU_CLK_REG) & (~DSU_FACTOR_MASK)) | (cpu_clk_restore_bak[2] & DSU_FACTOR_MASK)), DSU_CLK_REG);
 	writel(((readl(DSU_CLK_REG) & (~DSU_CLK_SRC_SEL_MASK)) | (cpu_clk_restore_bak[2] & DSU_CLK_SRC_SEL_MASK)), DSU_CLK_REG);
+
+	/* step4: resume CPUx pll value */
+	for (i = 0; i < 4; i++) {
+		/* CPU BACK PLL isn't LFM */
+		if (!i) {
+			writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_OUTPUT_MASK)) | CPU_PLL_OUTPUT(0)), CPU_PLL_REG(i));
+			writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_FACTOR_MASK)) | (cpu_pll_restore_bak[i] & CPU_PLL_FACTOR_MASK)), CPU_PLL_REG(i));
+			writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_LOCK_EN_MASK)) | CPU_PLL_LOCK_EN(0)), CPU_PLL_REG(i));
+			writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_LOCK_EN_MASK)) | CPU_PLL_LOCK_EN(1)), CPU_PLL_REG(i));
+			writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_UPDATE_MASK)) | CPU_PLL_UPDATE(1)), CPU_PLL_REG(i));
+			while ((readl(CPU_PLL_REG(i)) & CPU_PLL_UPDATE_MASK))
+				;
+
+			while (!(readl(CPU_PLL_REG(i)) & CPU_PLL_LOCK_STATUS_MASK))
+				;
+
+			time_mdelay(20);
+		writel(((readl(CPU_PLL_REG(i)) & (~CPU_PLL_OUTPUT_MASK)) | CPU_PLL_OUTPUT(1)), CPU_PLL_REG(i));
+		} else {
+			/* LFM pll setting */
+			val = (readl(CPU_PLL_REG(i)) & (~CPU_PLL_FACTOR_MASK)) | (cpu_pll_restore_bak[i] & CPU_PLL_FACTOR_MASK);
+			writel(val, CPU_PLL_REG(i));
+			val |= CPU_PLL_UPDATE(1);
+			writel(val, CPU_PLL_REG(i));
+			while ((readl(CPU_PLL_REG(i)) & CPU_PLL_UPDATE_MASK))
+				;
+		}
+	}
+	dbg_log();
 }
 
 #define CPU_DIRECT_ACCESS_DDR 0x8000200
@@ -1134,6 +1220,9 @@ static void nsi_resume(void)
 	writel(0x1, 0x202200c);
 	// csi rtlpr
 	writel(0x1, 0x202220c);
+
+	// eink hpr
+	writel(0x10000, 0x202060c);
 }
 
 static void ppu_resume(void)
@@ -1379,18 +1468,6 @@ static s32 standby_entry(struct message *pmessage)
 
 	return OK;
 }
-
-#ifdef CFG_CPUS_JTAG_USED
-void jtag_init(void)
-{
-	u32 reg;
-
-	reg = readl(0x07022030);
-	reg &= (~0x00ffff00);
-	reg |= 0x00333300;
-	writel(reg, 0x07022030);
-}
-#endif
 
 u32 is_suspend_lock(void)
 {

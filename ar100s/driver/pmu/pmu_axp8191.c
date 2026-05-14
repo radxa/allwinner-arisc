@@ -18,9 +18,31 @@
 */
 
 #include "pmu_i.h"
+#include <libfdt.h>
 
 #define SUNXI_CHARGING_FLAG_AXP8191 (0x08)
 #define SUNXI_REBOOT_FLAG_AXP8191   (0x01)
+
+extern u32 dtb_base;
+
+static int pmu_charging_poweroff_check(void)
+{
+	void *fdt;
+	int pmu_node, ret;
+	uint32_t power_off_check = 0;
+
+	fdt = (void *)(dtb_base);
+
+	pmu_node = fdt_path_offset(fdt, "pmu0");
+	if (pmu_node < 0)
+		return 0;
+
+	ret = fdt_getprop_u32(fdt, pmu_node, "pmu-charging-poweroff", &power_off_check);
+	if (ret < 0)
+		return 0;
+
+	return power_off_check;
+}
 
 /**
  * axp8191 voltages info table,
@@ -108,13 +130,49 @@ static void _axp8191_pmu_softset(u8 val)
 		;
 }
 
+static bool _is_bmu_axp519(void)
+{
+	void *fdt;
+	int bmu_node;
+	const char *compatible;
+
+	fdt = (void *)(dtb_base);
+	bmu_node = fdt_path_offset(fdt, "charger_power");
+	if (bmu_node < 0)
+		return FALSE;
+
+	compatible = fdt_getprop(fdt, bmu_node, "compatible", NULL);
+	if (!compatible)
+		return FALSE;
+
+	return strcmp(compatible, "x-powers-ext,axp519") == 0;
+}
 
 static void axp8191_pmu_shutdown(void)
 {
+	u8 devaddr = RSB_RTSADDR_AXP8191;
+	u8 regaddr = AXP8191_BUFFER0;
+	u8 val = SUNXI_CHARGING_FLAG_AXP8191;
+
 	save_state_flag(REC_SHUTDOWN | 0x201);
 
-	bmu_shutdown();
-	_axp8191_pmu_softset(0);
+/**
+ * If BMU exists:
+ *   1. Configure BMU shutdown (power delay and system power down)
+ *   2. Wait 1000ms for power supply to turn off
+ *   3. If VBUS detected within 1000ms, set charging flag and reset for charging mode
+ *   4. Otherwise, system power off normally
+ * If BMU not exists: Direct system power off
+ */
+
+	if (is_bmu_exist() == TRUE && _is_bmu_axp519() == FALSE && bmu_check_status() == FDT_NODE_OKAY) {
+		bmu_shutdown();
+		mdelay(1000);
+		pmu_reg_write(&devaddr, &regaddr, &val, 1);
+		_axp8191_pmu_softset(1);
+	} else {
+		_axp8191_pmu_softset(0);
+	}
 }
 
 static void axp8191_pmu_reset(void)
@@ -136,6 +194,9 @@ static void axp8191_pmu_charging_reset(void)
 	u8 devaddr = RSB_RTSADDR_AXP8191;
 	u8 regaddr = AXP8191_BUFFER0;
 	u8 val;
+
+	if (pmu_charging_poweroff_check())
+		return;
 
 	save_state_flag(REC_SHUTDOWN | 0x203);
 	val = _axp8191_vbus_check();

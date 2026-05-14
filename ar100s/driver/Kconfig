@@ -6,6 +6,8 @@ source "driver/twi/Kconfig"
 
 source "driver/hwmsgbox/Kconfig"
 
+source "driver/hdmi/Kconfig"
+
 source "driver/timer/Kconfig"
 
 source "driver/watchdog/Kconfig"
@@ -15,5 +17,11 @@ source "driver/ir/Kconfig"
 source "driver/dram/Kconfig"
 
 source "driver/intc/Kconfig"
+
+source "driver/smc/Kconfig"
+
+source "driver/ndma/Kconfig"
+
+source "driver/gpio_powerkey/Kconfig"
 
 endmenu

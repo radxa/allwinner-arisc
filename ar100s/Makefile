@@ -56,6 +56,7 @@ CFLAGS += -Iinclude
 CFLAGS += -Iinclude/driver
 CFLAGS += -Iinclude/service
 CFLAGS += -Iinclude/system
+CFLAGS += -Iinclude/hdmi
 CFLAGS += -Ilibrary/libfdt/include
 CFLAGS += $(CFLAGS-y)
 CFLAGS += -Iinclude/generated

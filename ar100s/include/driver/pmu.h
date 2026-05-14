@@ -349,6 +349,60 @@
 #define AXP2202_BUFFERC         (0xFF)
 #define AXP2202_INVALID_ADDR    (0x100)
 
+#define AXP2202_MODE_CHGSTATUS	(0x01)
+#define AXP2202_CHIP_ID		(0x03)
+#define AXP2202_CHIP_VER	(0x04)
+#define AXP2202_CHIP_ID_EXT	(0x0e)
+#define AXP2202_CHIP_VER_EXT	(0x0f)
+
+#define AXP2202_OUTPUT_CTL0	(0x80)
+#define AXP2202_OUTPUT_CTL1	(0x81)
+#define AXP2202_OUTPUT_CTL2	(0x90)
+#define AXP2202_OUTPUT_CTL3	(0x91)
+
+#define AXP2202_DC1OUT_VOL	(0x83)
+#define AXP2202_DC2OUT_VOL	(0x84)
+#define AXP2202_DC3OUT_VOL	(0x85)
+#define AXP2202_DC4OUT_VOL	(0x86)
+
+#define AXP2202_ALDO1OUT_VOL	(0x93)
+#define AXP2202_ALDO2OUT_VOL	(0x94)
+#define AXP2202_ALDO3OUT_VOL	(0x95)
+#define AXP2202_ALDO4OUT_VOL	(0x96)
+
+#define AXP2202_BLDO1OUT_VOL	(0x97)
+#define AXP2202_BLDO2OUT_VOL	(0x98)
+#define AXP2202_BLDO3OUT_VOL	(0x99)
+#define AXP2202_BLDO4OUT_VOL	(0x9A)
+
+#define AXP2202_CLDO1OUT_VOL	(0x9B)
+#define AXP2202_CLDO2OUT_VOL	(0x9C)
+#define AXP2202_CLDO3OUT_VOL	(0x9D)
+#define AXP2202_CLDO4OUT_VOL	(0x9E)
+
+#define AXP2202_CPUSLDO_VOL	(0x9F)
+
+#define AXP2202_PWRON_STATUS	(0x20)
+#define AXP2202_PWEON_PWEOFF_EN	(0x22)
+#define AXP2202_DCDC_PWEOFF_EN	(0x23)
+#define AXP2202_VSYS_MIN	(0x15)
+#define AXP2202_VBUS_VOL_SET	(0x16)
+#define AXP2202_VBUS_CUR_SET	(0x17)
+#define AXP2202_SELLP_CFG	(0x25)
+#define AXP2202_OFF_CTL		(0x27)
+#define AXP2202_CHARGE1		(0x62)
+#define AXP2202_CHGLED_SET	(0x70)
+
+#define AXP2202_ADC_CH0		(0xC0)
+#define AXP2202_BAT_AVERVOL_H6	(0xC4)
+#define AXP2202_BAT_AVERVOL_L8	(0xC5)
+
+#define AXP2202_TWI_ADDR_EXT	(0xFF)
+#define AXP2202_EFUS_OP_CFG	(0xF0)
+#define AXP2202_EFREQ_CTRL	(0xF1)
+
+#define AXP2202_MODULE_EN	(0x19)
+
 
 /* AW1657 registers list */
 #define AW1657_PWR_SRC_STA      (0x00)
@@ -466,6 +520,8 @@
 #define AXP1530_ERROR_MANAGEMENT				(0x71)
 #define AXP1530_DCDC1_2_POWER_ON_DEFAULT_SET			(0x80)
 #define AXP1530_DCDC3_ALDO1_POWER_ON_DEFAULT_SET		(0x81)
+#define AXP1530_STARTUP_SEQ_SET					(0x83)
+#define AXP1530_INVALID_ADDR					(0x100)
 
 /* define AXP8191 REGISTER */
 #define   AXP8191_IC_TYPE                       (0x03)
@@ -707,6 +763,27 @@
 #define AXP515_ADJUST_PARA         (0xE8)
 #define AXP515_ADJUST_PARA1        (0xE9)
 #define AXP515_ADDR_EXTENSION      (0xFF)
+
+
+/* For axp517 */
+#define AXP517_STATUS0				(0x00)
+#define AXP517_DATA_BUFF			(0x04)
+#define AXP517_CHIP_ID_EXT			(0x0E)
+
+#define AXP517_BATFET_CTRL         (0x12)
+
+#define AXP517_IRQ_EN0				(0x40)
+#define AXP517_IRQ_EN1				(0x41)
+#define AXP517_IRQ_EN2				(0x42)
+#define AXP517_IRQ_EN3				(0x43)
+#define AXP517_IRQ_EN4				(0x44)
+#define AXP517_IRQ0					(0x48)
+#define AXP517_IRQ1					(0x49)
+#define AXP517_IRQ2					(0x4a)
+#define AXP517_IRQ3					(0x4b)
+#define AXP517_IRQ4					(0x4c)
+
+#define AXP517_TWI_ADDR_EXT      (0xFF)
 
 /* AXP1530 voltage type */
 enum {
@@ -986,6 +1063,7 @@ extern s32 bmu_charging_reset(void);
 extern s32 bmu_charging_vbus_det(void);
 extern void bmu_shutdown(void);
 extern void bmu_reset(void);
+extern int bmu_check_status(void);
 #else
 static inline s32 bmu_init(void) { return -1; }
 static inline s32 is_bmu_exist(void) { return -1; }
@@ -993,6 +1071,7 @@ static inline s32 bmu_charging_reset(void) { return -1; }
 static inline s32 bmu_charging_vbus_det(void) { return -1; }
 static inline void bmu_shutdown(void) { return; }
 static inline void bmu_reset(void) { return; }
+static inline int bmu_check_status(void) { return -1; }
 #endif
 
 #ifdef CFG_PMU_USED
@@ -1006,7 +1085,9 @@ extern void pmu_reset(void);
 extern void pmu_charging_reset(void);
 extern s32 pmu_standby_init(void);
 extern s32 pmu_standby_exit(void);
-#else
+extern void pmu_power_check(void);
+extern s32 pmu_irq_check(void);
+#else /* CFG_PMU_USED */
 static inline s32 pmu_init(void) { return -1; }
 static inline s32 pmu_exit(void) { return -1; }
 static inline s32 is_pmu_exist(void) { return -1; }
@@ -1017,14 +1098,20 @@ static inline void pmu_reset(void) { return; }
 static inline void pmu_charging_reset(void) { return; }
 static inline s32 pmu_standby_init(void) { return -1; }
 static inline s32 pmu_standby_exit(void) { return -1; }
-#endif
+static inline void pmu_power_check(void) { return; }
+static inline s32 pmu_irq_check(void) { return -1; }
+#endif /* CFG_PMU_USED */
 
 #if defined CFG_PMU_EXT_USED
 extern s32 pmu_ext_is_exist(void);
 extern s32 pmu_ext_set_voltage_state(u32 type, u32 state);
-#else
+extern void pmu_ext_power_check(void);
+extern void pmu_ext_shutdown(void);
+#else /* CFG_PMU_EXT_USED */
 static inline s32 pmu_ext_is_exist(void) { return FALSE; }
 static inline s32 pmu_ext_set_voltage_state(u32 type, u32 state) { return -1; }
-#endif
+static inline void pmu_ext_power_check(void) { return; }
+static inline void pmu_ext_shutdown(void) { return; }
+#endif /* CFG_PMU_EXT_USED */
 
 #endif  /* __PMU_H__ */

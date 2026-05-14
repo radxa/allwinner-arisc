@@ -9,6 +9,7 @@
 #ifndef __PLATFORM_CFGS_H__
 #define __PLATFORM_CFGS_H__
 
+#define AXP_TRANS_BYTE_MAX		(8)	/* the max number of pmu transfer byte */
 
 #define TWI_CLOCK_FREQ                  (200 * 1000)	/* the twi source clock freq */
 #define TICK_PER_SEC                    (100)

@@ -39,12 +39,6 @@ config SYSTEM_DEBUG
 	def_bool n
 	prompt "system debug"
 
-comment "cpus jtag function"
-
-config CPUS_JTAG_USED
-	def_bool n
-	prompt "cpus jtag support"
-
 endmenu
 
 

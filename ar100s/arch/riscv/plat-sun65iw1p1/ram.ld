@@ -5,7 +5,7 @@ ENTRY(_start)
 
 MEMORY
 {
-	dram (rxaiw) : o = 0x40004000, l = 0x24000
+	dram (rxaiw) : o = 0x40004000, l = 0x28000
 }
 
 PHDRS
@@ -15,8 +15,8 @@ PHDRS
 
 SECTIONS
 {
-	metal_segment_stack_begin = 0x40027C00;
-	metal_segment_stack_end = 0x40028000;
+	metal_segment_stack_begin = 0x4002BC00;
+	metal_segment_stack_end = 0x4002C000;
 	PROVIDE (__etext = .);
 	PROVIDE (_etext = .);
 	PROVIDE (etext = .);
@@ -67,11 +67,29 @@ SECTIONS
 		*(.srodata .srodata.*)
 	} >dram AT>dram :dram
 
-		.bss		:
+	.bss		:
 	{
 		PROVIDE( __bss_start = .);
 		*(.bss .bss.*)
 		*(.sbss .sbss.*)
 	} >dram AT>dram :dram
 	PROVIDE(__bss_end = .);
+
+	.dram_head_magic 0x40029300 :
+	{
+		dram_head_magic = .;
+		*(.dram_head_magic)
+	} >dram
+
+	.dts_dram_para 0x40029304 :
+	{
+		dts_dram_para = .;
+		*(.dts_dram_para)
+	} >dram
+
+	.dram_tail_magic 0x40029584 :
+	{
+		dram_tail_magic = .;
+		*(.dram_tail_magic)
+	} >dram
 }

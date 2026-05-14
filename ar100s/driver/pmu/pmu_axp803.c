@@ -18,8 +18,30 @@
 */
 
 #include "pmu_i.h"
+#include <libfdt.h>
 
 #define SUNXI_CHARGING_FLAG (0x61)
+
+extern u32 dtb_base;
+
+static int pmu_charging_poweroff_check(void)
+{
+	void *fdt;
+	int pmu_node, ret;
+	uint32_t power_off_check = 0;
+
+	fdt = (void *)(dtb_base);
+
+	pmu_node = fdt_path_offset(fdt, "pmu0");
+	if (pmu_node < 0)
+		return 0;
+
+	ret = fdt_getprop_u32(fdt, pmu_node, "pmu-charging-poweroff", &power_off_check);
+	if (ret < 0)
+		return 0;
+
+	return power_off_check;
+}
 
 /**
  * aw1660 voltages info table,
@@ -97,6 +119,9 @@ static void aw1660_pmu_charging_reset(void)
 	u8 devaddr = RSB_RTSADDR_AW1660;
 	u8 regaddr;
 	u8 val;
+
+	if (pmu_charging_poweroff_check())
+		return;
 
 	regaddr = AW1660_PWR_SRC_STA;
 	pmu_reg_read(&devaddr, &regaddr, &val, 1);

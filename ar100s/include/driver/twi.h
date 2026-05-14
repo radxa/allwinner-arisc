@@ -20,6 +20,7 @@
 #ifndef __TWI_H__
 #define __TWI_H__
 
+#ifdef CFG_TWI_USED
 /*
 *********************************************************************************************************
 *                                       INITIALIZE TWI
@@ -83,5 +84,16 @@ extern s32 twi_get_status(void);
 extern s32 twi_clkchangecb(u32 command, u32 freq);
 s32 twi_standby_init(void);
 s32 twi_standby_exit(void);
-
+#else /* CFG_TWI_USED */
+static inline s32 twi_init(void) { return -1; };
+static inline s32 twi_exit(void) { return -1; };
+static inline s32 twi_read(u32 devaddr, u8 *addr, u8 *data, u32 len) { return -1; };
+static inline s32 twi_write(u32 devaddr, u8 *addr, u8 *data, u32 len) { return -1; };
+static inline bool is_twi_lock(void){ return 0; };
+static inline int twi_send_clk_9pulse(void) { return -1; };
+static inline s32 twi_get_status(void) { return -1; };
+static inline s32 twi_clkchangecb(u32 command, u32 freq) { return -1; };
+static inline s32 twi_standby_init(void) { return -1; };
+static inline s32 twi_standby_exit(void) { return -1; };
+#endif /* CFG_TWI_USED */
 #endif /* __TWI_H__ */

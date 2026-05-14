@@ -8,6 +8,7 @@
  */
 
 #include "hwmsgbox-amp.h"
+u32 volatile arm_is_die;
 
 static struct notifier *msgbox_rec_list;
 
@@ -67,6 +68,8 @@ s32 amp_msgbox_register_service(__pNotifier_t pcb)
 s32 amp_msgbox_init(void)
 {
 //	amp_msgbox_register_service(risc_receive_from_arm);
+
+	rpm_init();
 
 	return OK;
 }
@@ -159,4 +162,23 @@ u32 amp_msgbox_remote_fifo_is_full(u32 remote, u32 channel)
 	data = readl(AMP_MSGBOX_MSG_STA_REG(AMP_LOCAL, calculte_n(AMP_LOCAL, remote), channel));
 
 	return (data == MSGBOX_MAX_QUEUE) ? 1 : 0;
+}
+
+u32 amp_msgbox_check_arm_is_die(void)
+{
+	return arm_is_die;
+}
+
+u32 amp_msgbox_suspend(void)
+{
+	arm_is_die = 1;
+
+	return 0;
+}
+
+u32 amp_msgbox_resume(void)
+{
+	arm_is_die = 0;
+
+	return 0;
 }

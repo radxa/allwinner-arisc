@@ -56,10 +56,26 @@
 #include "./driver/timer.h"
 #include "./driver/uart.h"
 #include "./driver/watchdog.h"
+#include "./driver/rpm_api.h"
+#include "./driver/ndma.h"
+#include "./driver/gpio_powerkey.h"
 
 /* sevices */
 #include "./service/standby.h"
 #include "./service/mem_include.h"
+#include "./service/fake_power_off.h"
+
+/* hdmi */
+#include "./hdmi/awDefs.h"
+#include "./hdmi/awUsrProtocol.h"
+#include "./hdmi/reg_cpu_tv.h"
+#include "./hdmi/awComm.h"
+#include "./hdmi/awCecAPI.h"
+#include "./hdmi/awCECHigh.h"
+#include "./hdmi/awCECLow.h"
+#include "./hdmi/awHDMI.h"
+#include "./hdmi/awRam.h"
+#include "./hdmi/awSystem.h"
 
 /* debugger */
 #include "./dbgs.h"

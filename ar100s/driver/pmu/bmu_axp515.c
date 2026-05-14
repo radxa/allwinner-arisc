@@ -78,6 +78,10 @@ static void bmu_axp515_shutdown(void)
 	data = 0x9;
 	pmu_reg_write(&devaddr, &regaddr, &data, 1);
 
+	regaddr = AXP515_CC_MODE_CTRL;
+	data = 0x11;
+	pmu_reg_write(&devaddr, &regaddr, &data, 1);
+
 	regaddr = AXP515_BATFET_DLY;
 	pmu_reg_read(&devaddr, &regaddr, &data, 1);
 	data &= ~(0x30);

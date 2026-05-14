@@ -46,19 +46,7 @@
 #define INTC_DMA_IRQ            34
 #define INTC_GINT0_IRQ          35
 #define INTC_GINT1_IRQ          36
-#define INTC_GINT2_IRQ          37
-#define INTC_GINT3_IRQ          38
-#define INTC_GINT4_IRQ          39
-#define INTC_GINT5_IRQ          40
-#define INTC_GINT6_IRQ          41
-#define INTC_GINT7_IRQ          42
-#define INTC_GINT8_IRQ          43
-#define INTC_GINT9_IRQ          44
-#define INTC_GINT10_IRQ         45
-#define INTC_GINT11_IRQ         46
-#define INTC_GINT12_IRQ         47
-#define INTC_GINT13_IRQ         48
-#define INTC_GINT14_IRQ         49
+#define IRQ_SOUCE_MAX           (INTC_GINT1_IRQ + 1)
 
 /*
  * ------------------------------------------------------------------------------
@@ -73,11 +61,5 @@
 #define GIC_R_ALARM0_IRQ        140
 #define GIC_R_GPIOL_IRQ         143
 
-/*
- *------------------------------------------------------------------------------
- * the max interrupt source number
- *------------------------------------------------------------------------------
- */
-#define IRQ_SOUCE_MAX           37
 
 #endif	/*__IRQNUM_CONFIG_H__*/

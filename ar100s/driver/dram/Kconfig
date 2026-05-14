@@ -34,6 +34,11 @@ config DRAM_PARA_V2
 	prompt "DRAM para v2 used"
 	default n
 
+config HOT_REBOOT
+	bool
+	prompt "Keep power online for hot reboot"
+	default n
+
 choice DDR_TYPE
 	prompt  "DDR type used"
 	depends on HAVE_DDR_SEL_SUPPORT

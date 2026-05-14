@@ -37,10 +37,4 @@ void startup_entry(void);
 
 int daemon_register_service(__pNotifier_t pcb);
 
-#ifdef CFG_CPUS_JTAG_USED
-extern void jtag_init(void);
-#else
-static inline void jtag_init(void) { return; }
-#endif
-
 #endif /* __DAEMON_H__ */

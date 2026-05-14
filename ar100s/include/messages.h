@@ -54,6 +54,7 @@ typedef struct message {
 #define SYS_OP_REQ                  (MESSAGE_BASE + 0x14)	/* cpu operations         (ac327 to arisc)          */
 #define CLEAR_WAKEUP_SRC_REQ        (MESSAGE_BASE + 0x15)
 #define SET_WAKEUP_SRC_REQ          (MESSAGE_BASE + 0x16)
+#define GET_PMU_WAKEUP_SRC_REQ      (MESSAGE_BASE + 0x19)
 
 //set debug level commands
 #define SET_DEBUG_LEVEL_REQ         (MESSAGE_BASE + 0x50)	/* set debug level   (ac327 to ar100)               */

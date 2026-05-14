@@ -69,6 +69,7 @@
 #define INTC_GINT16_IRQ         87
 #define INTC_GINT17_IRQ         88
 #define INTC_GINT18_IRQ         89
+#define IRQ_SOUCE_MAX           (INTC_GINT18_IRQ + 1)
 
 /*
  * ------------------------------------------------------------------------------
@@ -86,12 +87,5 @@
 #define GIC_R_GPIOM_S_IRQ  192
 #define GIC_R_GPIOM_NS_IRQ 193
 #define GIC_R_IR_IRQ       199
-
-/*
- *------------------------------------------------------------------------------
- * the max interrupt source number
- *------------------------------------------------------------------------------
- */
-#define IRQ_SOUCE_MAX           44
 
 #endif	/*__IRQNUM_CONFIG_H__*/

@@ -35,7 +35,7 @@ struct watchdog_regs *pwatchdog_regs;
 s32 watchdog_init(void)
 {
 	/* initialize the pointer of watchdog registers */
-	pwatchdog_regs = (struct watchdog_regs *)(WDOG0_REG_BASE);
+	pwatchdog_regs = (struct watchdog_regs *)(R_WDOG_REG_BASE);
 
 	/*
 	 * set watchdog work mode

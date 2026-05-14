@@ -3,7 +3,7 @@ MEMORY
 	vectors : ORIGIN = 0x00000000, LENGTH = 0x00004000
 	/* 64k ram area for arisc code */
 	paras	: ORIGIN = 0x00004000, LENGTH = 0x000000f0
-	ram     : ORIGIN = 0x000040f0, LENGTH = 0x0000ff10
+	ram     : ORIGIN = 0x000040f0, LENGTH = 0x0001ff10
 	/* 256k dram area, for dts data */
 	dram    : ORIGIN = 0x48100000, LENGTH = 0x00040000
 }

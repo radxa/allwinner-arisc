@@ -10,26 +10,31 @@
 
 #define BIT(n)							(0x1 << (n))
 
-#define SUNXI_CPU_OPS_BASE				0x07050000
-#define CPUS_RST_CTRL_REG				SUNXI_CPU_OPS_BASE
-#define HOTPLUG_CONTROL_REG(n)			(SUNXI_CPU_OPS_BASE + 0x200 + (n) * 4)
-#define WAKEUP_MASK						BIT(1)
-#define HOTPLUG_EN						BIT(0)
-#define HOTPLUG_POWERMODE_REG(n)		(SUNXI_CPU_OPS_BASE + 0x220 + (n) * 4)
-#define POWER_ON						BIT(0)
+#define SUNXI_CPU_OPS_BASE				0x07001000
+#define SUNXI_CPU_PWRS_BASE				(SUNXI_CPU_OPS_BASE + 0x50)
+#define PWRS_STAT_REG(cluster, core)		(SUNXI_CPU_PWRS_BASE + (cluster) * 0x1000 + (core) * 0x4)
+#define POWER_MASK						0xff
+#define POWER_OFF						0xff
 
-#define PPU_WRAP(n)						(0x07051000 + (n) * 0x1000)
-#define PPU_PWPR(n)						(PPU_WRAP(n) + 0x0000)
-#define PPU_PMER(n)						(PPU_WRAP(n) + 0x0004)
-#define PPU_PWSR(n)						(PPU_WRAP(n) + 0x0008)
-#define STATE_ON						0x8
-#define STATE_OFF						0x0
+#define SUNXI_CPU_CFG_BASE				(SUNXI_CPU_OPS_BASE + 0x70)
+#define SUNXI_CPUS_CFG_REG(cluster, core)	(SUNXI_CPU_CFG_BASE + (cluster) * 0x1000 + (core) * 0x4)
+#define CPU_IRQ_MASK_BIT				BIT(4)
+#define CPU_ENTER_IDLE_BIT				BIT(16)
 
-#define SUNXI_CLUS_OPS_BASE				0x08000000
-#define SUNXI_INITARCH_REG(n)			(SUNXI_CLUS_OPS_BASE + 0x0020 + (n) * 4)
+#define HOTPLUG_CONTROL_BASE 			(SUNXI_CPU_OPS_BASE + 0x80)
+#define HOTPLUG_CONTROL_REG(cluster, core)	(HOTPLUG_CONTROL_BASE + (cluster) * 0x1000 + (core) * 0x4)
+#define WAKEUP_MASK						BIT(0)
+#define HOTPLUG_REQ						BIT(16)
+
+#define SUNXI_CPUIDLE(cluster)			(SUNXI_CPU_OPS_BASE + 0x100 + (cluster) * 0x1000)
+#define SUNXI_PWR_SW_DELAY(cluster)			(SUNXI_CPU_OPS_BASE + 0x140 + (cluster) * 0x1000)
+#define SUNXI_F1F2_CONFIG_DELAY(cluster)	(SUNXI_CPU_OPS_BASE + 0x144 + (cluster) * 0x1000)
+
+#define SUNXI_CLUS_OPS_BASE							0x08210040
+#define SUNXI_INITARCH_REG(cluster, core)			(SUNXI_CLUS_OPS_BASE + (cluster) * 0x40 + (core) * 0x10)
 #define AARCH64							BIT(0)
-#define SUNXI_CPUCFG_RVBAR_LO_REG(n)	(SUNXI_CLUS_OPS_BASE + 0x0040 + (n) * 8)
-#define SUNXI_CPUCFG_RVBAR_HI_REG(n)	(SUNXI_CLUS_OPS_BASE + 0x0044 + (n) * 8)
+#define SUNXI_CPUCFG_RVBAR_LO_REG(cluster, core)	(SUNXI_CLUS_OPS_BASE + 0x4 + (cluster) * 0x40 + (core) * 0x10)
+#define SUNXI_CPUCFG_RVBAR_HI_REG(cluster, core)	(SUNXI_CLUS_OPS_BASE + 0x8 + (cluster) * 0x40 + (core) * 0x10)
 
 typedef unsigned int uint32_t;
 typedef unsigned long uintptr_t;

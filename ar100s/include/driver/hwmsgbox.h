@@ -150,6 +150,7 @@ extern s32 amp_msgbox_send_message(struct amp_msg *msg, u8 *buff, int len, u32 t
 extern u32 amp_msgbox_read_message(u32 remote, u32 channel);
 extern u32 amp_msgbox_remote_fifo_is_empty(u32 remote, u32 channel);
 extern u32 amp_msgbox_remote_fifo_is_full(u32 remote, u32 channel);
+extern u32 amp_msgbox_check_arm_is_die(void);
 #else
 static inline int calculte_n(int local, int remote) { return -1; }
 static inline s32 amp_msgbox_init(void) { return -1; }
@@ -160,6 +161,7 @@ static inline s32 amp_msgbox_send_message(struct amp_msg *msg, u8 *buff, int len
 static inline u32 amp_msgbox_read_message(u32 remote, u32 channel) { return -1; }
 static inline u32 amp_msgbox_remote_fifo_is_empty(u32 remote, u32 channel) { return -1; }
 static inline u32 amp_msgbox_remote_fifo_is_full(u32 remote, u32 channel) { return -1; }
+static inline u32 amp_msgbox_check_arm_is_die(void) { return -1; }
 #endif
 
 #endif /* __HWMSGBOX_H__ */
