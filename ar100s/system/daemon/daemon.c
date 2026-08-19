@@ -203,10 +203,12 @@ void startup_entry(void)
 	save_state_flag(REC_HOTPULG | 0xc);
 	LOG("watchdog ok\n");
 
-	/* feedback the startup state to ac327 */
-	startup_state_notify(OK);
+	/* Parse all data owned by U-Boot before reporting that the SCP is ready. */
 	platform_dts_parse_late();
 	set_paras();
+
+	/* feedback the startup state to ac327 */
+	startup_state_notify(OK);
 	save_state_flag(REC_HOTPULG | 0xf);
 	LOG("startup feedback ok\n");
 
@@ -227,4 +229,3 @@ void startup_entry(void)
 	while (1)
 		;
 }
-
